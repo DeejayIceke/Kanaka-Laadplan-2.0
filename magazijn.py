@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 def toon_magazijn_tab():
-    st.subheader("🏭 Magazijn Stapeling — Vergelijking Kant A (3 diep) vs. Kant B (4 diep)")
+    st.subheader("🏭 Magazijn Stapeling — Plattegrond (Muur bovenaan, Gangpad onderaan)")
 
     mc1, mc2 = st.columns(2)
     with mc1:
@@ -25,11 +25,11 @@ def toon_magazijn_tab():
     benutting_b = round((aantal_stuks / (plekken_b * max_stapel)) * 100)
 
     if benutting_a > benutting_b:
-        st.success(f"💡 **Beste benutting: Kant A (3 diep)** — Je gebruikt **{rijen_a} rijen** ({benutting_a}% benut, tegenover {benutting_b}% aan Kant B).")
+        st.success(f"💡 **Beste benutting: Kant A (3 diep)** — Je gebruikt **{rijen_a} rijen naast elkaar** ({benutting_a}% benut, tegenover {benutting_b}% aan Kant B).")
     elif benutting_b > benutting_a:
-        st.success(f"💡 **Beste benutting: Kant B (4 diep)** — Je gebruikt **{rijen_b} rijen** ({benutting_b}% benut, tegenover {benutting_a}% aan Kant A).")
+        st.success(f"💡 **Beste benutting: Kant B (4 diep)** — Je gebruikt **{rijen_b} rijen naast elkaar** ({benutting_b}% benut, tegenover {benutting_a}% aan Kant A).")
     else:
-        st.success(f"💡 **Beste benutting: Kant B (4 diep)** — Beide kanten hebben **{benutting_b}%** benutting, maar aan Kant B heb je maar **{rijen_b} rijen** nodig i.p.v. {rijen_a}.")
+        st.success(f"💡 **Beste benutting: Kant B (4 diep)** — Beide kanten hebben **{benutting_b}%** benutting, maar aan Kant B heb je maar **{rijen_b} rijen** naast elkaar nodig i.p.v. {rijen_a}.")
 
     col_a, col_b = st.columns(2)
 
@@ -41,13 +41,11 @@ def toon_magazijn_tab():
             rest_plekken_na_deze = rest_rijen_na_deze * diepte
             rest_plekken_nu = (aantal_rijen - r) * diepte
 
-            # Start met een volle rij op max_h zolang de rijen erna minstens 2H kunnen blijven (of als dit de laatste rij is)
             if rest_stuks >= diepte * max_h and (rest_plekken_na_deze == 0 or (rest_stuks - diepte * max_h) >= rest_plekken_na_deze * 2):
                 for _ in range(diepte):
                     verdeling.append(max_h)
                 rest_stuks -= diepte * max_h
             else:
-                # Verdeel de overige pallets gelijkmatig (bijv. 3H en 2H) over de resterende plekken
                 basis = rest_stuks // rest_plekken_nu
                 extra = rest_stuks % rest_plekken_nu
                 for _ in range(extra):
@@ -71,20 +69,31 @@ def toon_magazijn_tab():
         with kolom:
             st.markdown(f"#### {titel}")
             k1, k2 = st.columns(2)
-            k1.metric("Benodigde rijen", f"{aantal_rijen} rijen", uitleg_tekst)
-            k2.metric("Stapel-benutting", f"{benutting}%", f"{totaal_plekken} vloerplekken gevuld")
+            k1.metric("Rijen naast elkaar", f"{aantal_rijen} rijen", uitleg_tekst)
+            k2.metric("Stapel-benutting", f"{benutting}%", f"{totaal_plekken} vloerplekken")
 
-            fig, ax = plt.subplots(figsize=(6, max(2.0, aantal_rijen * 0.75)))
-            ax.set_xlim(0, diepte + 1.4)
-            ax.set_ylim(0, aantal_rijen * 1.15)
+            breedte_fig = max(5.0, aantal_rijen * 1.15)
+            hoogte_fig = diepte * 1.05 + 1.2
+            fig, ax = plt.subplots(figsize=(breedte_fig, hoogte_fig))
+            ax.set_xlim(0, aantal_rijen * 1.15 + 0.2)
+            ax.set_ylim(-0.6, diepte * 1.05 + 0.8)
             ax.axis('off')
+
+            # Muur bovenaan tekenen
+            ax.plot([0.1, aantal_rijen * 1.15], [diepte * 1.05 + 0.45, diepte * 1.05 + 0.45], color="#334155", linewidth=4)
+            ax.text((aantal_rijen * 1.15) / 2, diepte * 1.05 + 0.6, "🧱 MUUR (Achterkant)", ha="center", va="bottom", fontweight="bold", fontsize=10, color="#334155")
+
+            # Gangpad onderaan tekenen
+            ax.text((aantal_rijen * 1.15) / 2, -0.45, "⬇️ GANGPAD (Voorkant) ⬇️", ha="center", va="top", fontweight="bold", fontsize=10, color="#64748b")
 
             plek_idx = 0
             for r in range(aantal_rijen):
-                y = (aantal_rijen - 1 - r) * 1.15 + 0.1
-                ax.text(0, y + 0.45, f"Rij {r + 1}", va="center", fontweight="bold", fontsize=10)
+                x = 0.15 + r * 1.15
+                ax.text(x + 0.45, diepte * 1.05 + 0.15, f"Rij {r + 1}", ha="center", va="bottom", fontweight="bold", fontsize=10)
+
                 for d in range(diepte):
-                    x = 1.1 + d * 0.95
+                    # d = 0 staat bovenaan tegen de muur, d = diepte-1 staat onderaan aan het gangpad
+                    y = (diepte - 1 - d) * 1.05 + 0.05
                     h_nu = verdeling[plek_idx]
                     plek_idx += 1
 
@@ -101,8 +110,8 @@ def toon_magazijn_tab():
                         tekst_kleur = "#64748b"
                         label = "Leeg"
 
-                    ax.add_patch(patches.Rectangle((x, y), 0.85, 0.85, linewidth=1.5, edgecolor="black", facecolor=kleur))
-                    ax.text(x + 0.425, y + 0.425, label, ha="center", va="center", fontweight="bold", fontsize=10, color=tekst_kleur)
+                    ax.add_patch(patches.Rectangle((x, y), 0.9, 0.9, linewidth=1.5, edgecolor="black", facecolor=kleur))
+                    ax.text(x + 0.45, y + 0.45, label, ha="center", va="center", fontweight="bold", fontsize=10, color=tekst_kleur)
             st.pyplot(fig)
 
     teken_kant(col_a, "◀️ Kant A (3 diep)", 3, rijen_a, benutting_a)
