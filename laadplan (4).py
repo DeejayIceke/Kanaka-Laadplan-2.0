@@ -349,4 +349,8 @@ if pallets_cp3 + pallets_cp7_totaal + pallets_ibc + pallets_cp9 + pallets_mw > 0
     )
 else:
     st.info("Container is leeg. Gebruik de + en - knoppen om te beginnen.")
+    st.divider()
+from magazijn import toon_magazijn_tab
+toon_magazijn_tab()
+
 
