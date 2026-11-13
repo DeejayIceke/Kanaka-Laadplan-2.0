@@ -186,7 +186,9 @@ voeg_partij_toe_aslast("CP9", as_v_cp9, "Lang")
 voeg_partij_toe_aslast("Maatwerk", as_v_mw, "Lang")
 
 for art_naam in st.session_state.klik_volgorde:
-if art_naam in actuele_aantallen: voeg_partij_toe(art_naam, actuele_aantallen[art_naam])
+    if art_naam in actuele_aantallen:
+        voeg_partij_toe(art_naam, actuele_aantallen[art_naam])
+
 
 
 
