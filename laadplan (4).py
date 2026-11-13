@@ -270,9 +270,3 @@ components.html("""
 else:
 st.markdown('', unsafe_allow_html=True)
 st.info("Container is leeg. Gebruik de + en - knoppen om te beginnen.")
-
-*(Bonus: Ik heb bij `3. Plan` ook meteen het gekozen `container_type` erbij gezet, zodat je op het geprinte A4'tje direct ziet of het om een 20ft, 40ft of 45ft container gaat.)*
-
-<FollowUp>
-Test na het opslaan op GitHub even de **printknop** in je live app—komt de tekening netjes op één liggend A4'tje te staan, of moeten we de grootte nog iets bijstellen?
-</FollowUp>
