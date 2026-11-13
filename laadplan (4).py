@@ -36,8 +36,38 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("Fons Laadplan 🚛")
-st.title("Fons Laadplan 2.0 🚛")
+st.markdown("""
+    <div style="
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border-left: 6px solid #2ecc71;
+        padding: 18px 24px;
+        border-radius: 12px;
+        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    ">
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1" y="4" width="15" height="12" rx="2" fill="rgba(46, 204, 113, 0.15)"></rect>
+                <line x1="5" y1="4" x2="5" y2="16"></line>
+                <line x1="9" y1="4" x2="9" y2="16"></line>
+                <line x1="13" y1="4" x2="13" y2="16"></line>
+                <path d="M16 8h4l3 4v4h-7V8z" fill="rgba(52, 152, 219, 0.2)" stroke="#3498db"></path>
+                <circle cx="5.5" cy="18.5" r="2.5" fill="#1e293b" stroke="#f1c40f"></circle>
+                <circle cx="18.5" cy="18.5" r="2.5" fill="#1e293b" stroke="#f1c40f"></circle>
+            </svg>
+            <div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">Fons Laadplan</span>
+                    <span style="background: linear-gradient(90deg, #2ecc71, #3498db); color: #0f172a; font-size: 13px; font-weight: 900; padding: 3px 10px; border-radius: 20px;">v2.0</span>
+                </div>
+                <div style="color: #94a3b8; font-size: 14px; margin-top: 2px;">Container & Aslast Optimalisatie</div>
+            </div>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
 container_type = st.selectbox(
     "1. Kies container:", 
