@@ -269,7 +269,6 @@ while idx < len(laad_lijst):
 totale_meters = max(x_onder, x_boven)
 restruimte = max_lengte - totale_meters
 
-st.markdown('<div id="alleen-laadplan">', unsafe_allow_html=True)
 st.write(f"### 3. Plan ({container_type}):")
 
 if pallets_cp3 + pallets_cp7_totaal + pallets_ibc + pallets_cp9 + pallets_mw > 0 or as_v_cp3 + as_v_cp7 + as_v_ibc + as_v_cp9 + as_v_mw + as_a_cp3 + as_a_cp7 + as_a_ibc + as_a_cp9 + as_a_mw > 0:
@@ -280,24 +279,44 @@ if pallets_cp3 + pallets_cp7_totaal + pallets_ibc + pallets_cp9 + pallets_mw > 0
     st.pyplot(fig)
     st.write(f"**Geladen:** {totale_meters} mm van {max_lengte} mm.")
     st.write("💡 **Legenda:** [X] Blauw=CP3 | [X] Groen=CP7 (Lang) | [X] Paars=CP7 (Smal) | [X] Geel=IBC | [X] Oranje=CP9 | [X] Grijs=Maatwerk | [X] ROOD = Past Niet")
-    st.markdown('</div>', unsafe_allow_html=True)
 
-    components.html("""
-        <button onclick="window.parent.print()" style="
-            background-color: #FF4B4B;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            font-family: sans-serif;
-            margin-top: 10px;
-        ">
-            🖨️ Print alleen laadplan (A4)
-        </button>
-    """, height=60)
+    # Maak een kant-en-klare A4 liggende PDF (1 pagina, witte achtergrond)
+    import io
+    pdf_fig, pdf_ax = plt.subplots(figsize=(11.69, 8.27))  # Exact A4 liggend (landscape)
+    pdf_ax.axis('off')
+
+    # Titel en status bovenaan het A4-blad
+    status_tekst = f"PAST - Nog {restruimte} mm over" if restruimte >= 0 else f"PAST NIET - {abs(restruimte)} mm tekort"
+    pdf_ax.text(0.5, 0.92, f"Fons Laadplan 2.0 - {container_type}", fontsize=18, fontweight='bold', ha='center', va='center')
+    pdf_ax.text(0.5, 0.85, f"Geladen: {totale_meters} mm van {max_lengte} mm  ({status_tekst})", fontsize=13, ha='center', va='center')
+
+    # Teken de container in het midden van het A4-blad
+    ax_plan = pdf_fig.add_axes([0.05, 0.30, 0.90, 0.45])
+    ax_plan.set_xlim(0, max_lengte)
+    ax_plan.set_ylim(0, max_breedte)
+    ax_plan.set_aspect('equal', adjustable='box')
+    ax_plan.add_patch(patches.Rectangle((0, 0), max_lengte, max_breedte, linewidth=2, edgecolor='black', facecolor='none'))
+
+    for p in ax.patches[1:]:
+        ax_plan.add_patch(patches.Rectangle(p.get_xy(), p.get_width(), p.get_height(), linewidth=1, edgecolor='white', facecolor=p.get_facecolor(), alpha=0.85))
+    for t in ax.texts:
+        ax_plan.text(t.get_position()[0], t.get_position()[1], t.get_text(), color="black", weight="bold", ha="center", va="center", fontsize=10)
+
+    # Legenda onderaan het A4-blad
+    pdf_ax.text(0.5, 0.15, "Legenda: Blauw=CP3 | Groen=CP7 (Lang) | Paars=CP7 (Smal) | Geel=IBC | Oranje=CP9 | Grijs=Maatwerk | ROOD=Past Niet", fontsize=10, ha='center', va='center')
+
+    pdf_buffer = io.BytesIO()
+    pdf_fig.savefig(pdf_buffer, format="pdf", facecolor="white")
+    plt.close(pdf_fig)
+    pdf_buffer.seek(0)
+
+    st.download_button(
+        label="🖨️ Download / Print Laadplan (A4 PDF)",
+        data=pdf_buffer,
+        file_name="laadplan_A4.pdf",
+        mime="application/pdf",
+        type="primary"
+    )
 else:
-    st.markdown('</div>', unsafe_allow_html=True)
     st.info("Container is leeg. Gebruik de + en - knoppen om te beginnen.")
+
