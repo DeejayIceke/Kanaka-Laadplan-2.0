@@ -301,5 +301,7 @@ else:
     st.info("Container is leeg. Gebruik de + en - knoppen om te beginnen.")
 
 st.divider()
-from magazijn import toon_magazijn_tab
-toon_magazijn_tab()
+import importlib
+import magazijn
+importlib.reload(magazijn)
+magazijn.toon_magazijn_tab()
