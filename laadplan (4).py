@@ -221,7 +221,7 @@ while idx < len(laad_lijst):
     item = laad_lijst[idx]
 
     if item["L"] <= 1200 and "CP7" in item["naam"]:
-        tekst_grootte = 9
+        tekst_grootte = 10
         if "600" in item["naam"]:
             tekst_weergave = item["naam"].replace(" 600", "") + "\n600"
         else:
