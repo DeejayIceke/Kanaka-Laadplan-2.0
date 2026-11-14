@@ -7,7 +7,7 @@ def toon_magazijn_tab():
     st.markdown("""
     <div class="modern-header">
         <div class="modern-title">MAGAZIJN STAPELING <span style="font-weight:400; font-size:1.3rem;">| Visueel op Pallets</span></div>
-        <div class="modern-subtitle">Overzicht en stapelberekening per artikel (volledige lijnen gelijk, rest aan het gangpad)</div>
+        <div class="modern-subtitle">Overzicht en stapelberekening per artikel (zo weinig mogelijk rijen en zo laag &amp; gelijk mogelijk gestapeld)</div>
     </div>
 """, unsafe_allow_html=True)
 
@@ -52,37 +52,55 @@ def toon_magazijn_tab():
         aantal_rijen = math.ceil(min_plekken / diepte)
         totaal_plekken = aantal_rijen * diepte
 
-        volle_lagen_max = min(diepte - 1, totaal_pallets // (aantal_rijen * max_h))
-        pallets_achter = volle_lagen_max * aantal_rijen * max_h
-        rest_pallets = totaal_pallets - pallets_achter
+        beste_alle_hoogtes = None
+        max_achter_lijnen = diepte - 1
 
-        achterste_lijnen = []
-        for _ in range(volle_lagen_max):
-            achterste_lijnen.extend(list(max_h for _ in range(aantal_rijen)))
+        if max_achter_lijnen == 0:
+            gangpad_lijn = vul_gangpad_lijn(totaal_pallets, aantal_rijen, max_h)
+            beste_alle_hoogtes = gangpad_lijn
+        else:
+            for aantal_lijnen in range(max_achter_lijnen + 1):
+                if aantal_lijnen == 0:
+                    if totaal_pallets <= aantal_rijen * max_h:
+                        beste_alle_hoogtes = list(0 for _ in range(max_achter_lijnen * aantal_rijen)) + vul_gangpad_lijn(totaal_pallets, aantal_rijen, max_h)
+                        break
+                else:
+                    gevonden = False
+                    for h_achter in range(2, max_h + 1):
+                        pallets_achter = aantal_lijnen * aantal_rijen * h_achter
+                        rest_pallets = totaal_pallets - pallets_achter
+                        if 0 <= rest_pallets <= aantal_rijen * h_achter:
+                            if aantal_lijnen < max_achter_lijnen and rest_pallets > (aantal_rijen - 1) * h_achter:
+                                continue
+                            if rest_pallets == 0 and aantal_lijnen < max_achter_lijnen:
+                                continue
+                            if h_achter < max_h and rest_pallets < aantal_rijen * (h_achter - 1):
+                                continue
 
-        hoogte_voorlaatste_lijn = max_h
+                            lege_tussen = max_achter_lijnen - aantal_lijnen
+                            achter_lijst = list(h_achter for _ in range(aantal_lijnen * aantal_rijen))
+                            tussen_lijst = list(0 for _ in range(lege_tussen * aantal_rijen))
+                            gangpad_lijn = vul_gangpad_lijn(rest_pallets, aantal_rijen, h_achter)
+                            beste_alle_hoogtes = achter_lijst + tussen_lijst + gangpad_lijn
+                            gevonden = True
+                            break
+                    if gevonden:
+                        break
 
-        if volle_lagen_max >= 1 and max_h >= 3 and rest_pallets > 0:
-            nieuwe_rest = rest_pallets + aantal_rijen
-            nieuwe_max_gangpad = max_h - 1
-            if nieuwe_rest <= aantal_rijen * nieuwe_max_gangpad:
-                huidige_plekken_nodig = math.ceil(rest_pallets / max_h)
-                if huidige_plekken_nodig <= aantal_rijen // 2:
-                    achterste_lijnen = list(max_h for _ in range((volle_lagen_max - 1) * aantal_rijen)) + list(nieuwe_max_gangpad for _ in range(aantal_rijen))
-                    rest_pallets = nieuwe_rest
-                    hoogte_voorlaatste_lijn = nieuwe_max_gangpad
+        if beste_alle_hoogtes is None:
+            volle_lagen_max = min(diepte - 1, totaal_pallets // (aantal_rijen * max_h))
+            rest_pallets = totaal_pallets - (volle_lagen_max * aantal_rijen * max_h)
+            lege_tussen = (diepte - 1) - volle_lagen_max
+            beste_alle_hoogtes = (
+                list(max_h for _ in range(volle_lagen_max * aantal_rijen))
+                + list(0 for _ in range(lege_tussen * aantal_rijen))
+                + vul_gangpad_lijn(rest_pallets, aantal_rijen, max_h)
+            )
 
-        aantal_achterste_lijnen = len(achterste_lijnen) // aantal_rijen
-        lege_tussenlijnen = (diepte - 1) - aantal_achterste_lijnen
-
-        gangpad_lijn = vul_gangpad_lijn(rest_pallets, aantal_rijen, hoogte_voorlaatste_lijn)
-        alle_hoogtes = achterste_lijnen + list(0 for _ in range(lege_tussenlijnen * aantal_rijen)) + gangpad_lijn
-
-        gebruikte_plekken = sum(1 for h in alle_hoogtes if h > 0)
+        gebruikte_plekken = sum(1 for h in beste_alle_hoogtes if h > 0)
         benutting = round((gebruikte_plekken / totaal_plekken) * 100)
 
-        return aantal_rijen, benutting, gebruikte_plekken, totaal_plekken, alle_hoogtes
-
+        return aantal_rijen, benutting, gebruikte_plekken, totaal_plekken, beste_alle_hoogtes
     rijen_a, benutting_a, gebr_a, tot_a, hoogtes_a = bereken_verdeling(aantal_stuks, max_stapel, 3)
     rijen_b, benutting_b, gebr_b, tot_b, hoogtes_b = bereken_verdeling(aantal_stuks, max_stapel, 4)
 
