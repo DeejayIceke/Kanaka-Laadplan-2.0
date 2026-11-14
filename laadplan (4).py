@@ -2,85 +2,67 @@ import streamlit as st
 import math
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import streamlit as st
 
 st.set_page_config(page_title="Fons Laadplan", layout="wide")
 
-st.markdown(
-    """
+st.markdown("""
     <style>
-        .block-container { padding-top: 1rem !important; }
+        .block-container { padding-top: 1.5rem !important; }
         div[data-testid="stColumn"] { display: flex; flex-direction: column; }
         .custom-box {
             padding: 0.45rem; border-radius: 0.5rem; color: white; font-weight: bold; 
             font-size: 13px; text-align: center; margin-bottom: 0.25rem;
             min-height: 43px; display: flex; align-items: center; justify-content: center;
         }
+        .modern-header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-left: 6px solid #38bdf8;
+            padding: 1.2rem 1.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+        }
+        .modern-title {
+            font-size: 2.1rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(90deg, #ffffff 0%, #38bdf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+            line-height: 1.2;
+        }
+        .modern-subtitle {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin: 0.25rem 0 0 0;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
     </style>
-""",
-    unsafe_allow_html=True,
-)
-
-st.title("Fons Laadplan 2.0 🚛")
+    <div class="modern-header">
+        <div class="modern-title">FONS LAADPLAN <span style="font-weight:400; font-size:1.3rem;">| 2.0</span></div>
+        <div class="modern-subtitle">Slimme containerindeling &amp; aslast-optimalisatie</div>
+    </div>
+""", unsafe_allow_html=True)
 
 container_type = st.selectbox(
-    "1. Kies container:",
-    [
-        "45ft Container (13550 x 2426 mm)",
-        "40ft Container (12030 x 2350 mm)",
-        "20ft Container (5898 x 2350 mm)",
-    ],
+    "1. Kies container:", 
+    ["45ft Container (13550 x 2426 mm)", "40ft Container (12030 x 2350 mm)", "20ft Container (5898 x 2350 mm)"]
 )
 
-max_lengte = (
-    13550
-    if "45ft" in container_type
-    else 12030 if "40ft" in container_type else 5898
-)
+max_lengte = 13550 if "45ft" in container_type else 12030 if "40ft" in container_type else 5898
 max_breedte = 2426 if "45ft" in container_type else 2350
 
-if "klik_volgorde" not in st.session_state:
-    st.session_state.klik_volgorde = []
-if "reset_id" not in st.session_state:
-    st.session_state.reset_id = 0
+if "klik_volgorde" not in st.session_state: st.session_state.klik_volgorde = []
+if "reset_id" not in st.session_state: st.session_state.reset_id = 0
 
 product_info = {
-    "CP3": {
-        "lengte": 1150,
-        "breedte": 1150,
-        "kleur": "#3498db",
-        "stapelbaar": False,
-        "label": "CP3",
-    },
-    "CP7_600": {
-        "lengte": 1400,
-        "breedte": 1100,
-        "kleur": "#2ecc71",
-        "stapelbaar": True,
-        "label": "CP7 600",
-        "fontsize": 8,  # Aangepast voor dwars passen
-    },
-    "CP7_750": {
-        "lengte": 1400,
-        "breedte": 1200,
-        "kleur": "#e74c3c",  # Lichter rood ipv donkerrood (#c0392b)
-        "stapelbaar": True,
-        "label": "CP7 750",
-    },
-    "IBC": {
-        "lengte": 1000,
-        "breedte": 1200,
-        "kleur": "#f1c40f",
-        "stapelbaar": False,
-        "label": "IBC",
-    },
-    "Maatwerk": {
-        "lengte": 1000,
-        "breedte": 1000,
-        "kleur": "#7f8c8d",
-        "stapelbaar": False,
-        "label": "Maatwerk",
-    },
+    "CP3": {"lengte": 1150, "breedte": 1150, "kleur": "#3498db", "stapelbaar": False, "label": "CP3"},
+    "CP7_600": {"lengte": 1400, "breedte": 1100, "kleur": "#2ecc71", "stapelbaar": True, "label": "CP7 600"},
+    "CP7_750": {"lengte": 1400, "breedte": 1200, "kleur": "#e74c3c", "stapelbaar": True, "label": "CP7 750"},
+    "IBC": {"lengte": 1000, "breedte": 1200, "kleur": "#f1c40f", "stapelbaar": False, "label": "IBC"},
+    "Maatwerk": {"lengte": 1000, "breedte": 1000, "kleur": "#7f8c8d", "stapelbaar": False, "label": "Maatwerk"}
 }
 
 col_titel, col_wis = st.columns(2)
@@ -103,7 +85,7 @@ with col2:
     pallets_cp7_600_totaal = st.number_input("Aantal CP7 600", min_value=0, value=0, step=1, key=f"cp7_600_{st.session_state.reset_id}", label_visibility="collapsed")
 
 with col3:
-    st.markdown('<div class="custom-box" style="background-color:#c0392b;">CP7 750kg (1400x1200)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="custom-box" style="background-color:#e74c3c;">CP7 750kg (1400x1200)</div>', unsafe_allow_html=True)
     pallets_cp7_750_totaal = st.number_input("Aantal CP7 750", min_value=0, value=0, step=1, key=f"cp7_750_{st.session_state.reset_id}", label_visibility="collapsed")
 
 with col4:
@@ -120,7 +102,6 @@ with col5:
         mw_B = st.number_input("B (mm):", min_value=1, value=1000, step=10, key=f"mw_b_{st.session_state.reset_id}")
         product_info["Maatwerk"]["lengte"] = mw_L
         product_info["Maatwerk"]["breedte"] = mw_B
-
 as_v_cp3, as_a_cp3 = 0, 0
 as_v_cp7_600, as_a_cp7_600 = 0, 0
 as_v_cp7_750, as_a_cp7_750 = 0, 0
@@ -184,22 +165,26 @@ actuele_aantallen = {"CP3": hoofd_cp3, "CP7_600": hoofd_cp7_600, "CP7_750": hoof
 
 laad_lijst = []
 
+def haal_pallet_kleur(art_naam, overgebleven, standaard_kleur):
+    if art_naam == "CP7_600":
+        return "#1b5e20" if overgebleven >= 2 else "#2ecc71"
+    elif art_naam == "CP7_750":
+        return "#c0392b" if overgebleven >= 2 else "#ff7675"
+    return standaard_kleur
+
 def voeg_partij_toe_aslast(art_naam, aantal, richting):
     if aantal > 0:
         info = product_info[art_naam].copy()
         if "Smal" in richting:
             info["lengte"], info["breedte"] = info["breedte"], info["lengte"]
-            if art_naam == "CP7_600":
-                info["kleur"] = "#9b59b6"
-            elif art_naam == "CP7_750":
-                info["kleur"] = "#e84393"
 
         vloer = int(math.ceil(aantal / 2)) if info["stapelbaar"] else int(aantal)
         overgebleven = aantal
         for _ in range(vloer):
             h_label = " (2H)" if info["stapelbaar"] and overgebleven >= 2 else (" (1H)" if info["stapelbaar"] else "")
+            gekozen_kleur = haal_pallet_kleur(art_naam, overgebleven, info["kleur"])
             overgebleven -= 2
-            laad_lijst.append({"naam": f"{info['label']}{h_label}", "naam_puur": art_naam, "L": info["lengte"], "B": info["breedte"], "kleur": info["kleur"], "force_midden": True})
+            laad_lijst.append({"naam": f"{info['label']}{h_label}", "naam_puur": art_naam, "L": info["lengte"], "B": info["breedte"], "kleur": gekozen_kleur, "force_midden": True})
 
 def voeg_partij_toe(art_naam, aantal):
     if aantal > 0:
@@ -208,17 +193,7 @@ def voeg_partij_toe(art_naam, aantal):
         overgebleven = aantal
         for _ in range(vloer):
             h_label = " (2H)" if info["stapelbaar"] and overgebleven >= 2 else (" (1H)" if info["stapelbaar"] else "")
-            if art_naam == "CP7_600" and overgebleven >= 2:
-                gekozen_kleur = "#1b5e20"
-            elif art_naam == "CP7_600":
-                gekozen_kleur = "#00ff66"
-            elif art_naam == "CP7_750" and overgebleven >= 2:
-                gekozen_kleur = "#800000"
-            elif art_naam == "CP7_750":
-                gekozen_kleur = "#ff6b6b"
-            else:
-                gekozen_kleur = info["kleur"]
-
+            gekozen_kleur = haal_pallet_kleur(art_naam, overgebleven, info["kleur"])
             overgebleven -= 2
             laad_lijst.append({"naam": f"{info['label']}{h_label}", "naam_puur": art_naam, "L": info["lengte"], "B": info["breedte"], "kleur": gekozen_kleur, "force_midden": False})
 
@@ -236,7 +211,6 @@ voeg_partij_toe_aslast("CP7_600", as_a_cp7_600, richting_a_cp7_600)
 voeg_partij_toe_aslast("CP7_750", as_a_cp7_750, richting_a_cp7_750)
 voeg_partij_toe_aslast("IBC", as_a_ibc, "Lang")
 voeg_partij_toe_aslast("Maatwerk", as_a_mw, "Lang")
-
 fig, ax = plt.subplots(figsize=(15, 3.5))
 ax.set_xlim(0, max_lengte); ax.set_ylim(0, max_breedte); ax.set_aspect('equal', adjustable='box')
 container_border = patches.Rectangle((0, 0), max_lengte, max_breedte, linewidth=2, edgecolor='black', facecolor='none')
@@ -245,13 +219,15 @@ ax.add_patch(container_border)
 x_onder, x_boven, ibc_paar_teller, idx = 0, 0, 0, 0
 while idx < len(laad_lijst):
     item = laad_lijst[idx]
+    tekst_grootte = 6.5 if item["L"] <= 1200 and "CP7" in item["naam"] else 10
+
     if item["force_midden"]:
         start_x = max(x_onder, x_boven)
         vulling_kleur = "#ff0000" if (start_x + item["L"] > max_lengte) else item["kleur"]
         y_pos = (max_breedte - item["B"]) / 2
         rect = patches.Rectangle((start_x, y_pos), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85)
         ax.add_patch(rect)
-        ax.text(start_x + (item["L"]/2), y_pos + (item["B"]/2), item["naam"], color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=10)
+        ax.text(start_x + (item["L"]/2), y_pos + (item["B"]/2), item["naam"], color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         x_onder, x_boven = start_x + item["L"], start_x + item["L"]
         idx += 1
         continue
@@ -285,13 +261,13 @@ while idx < len(laad_lijst):
         vulling_kleur = "#ff0000" if (x_onder + item["L"] > max_lengte) else item["kleur"]
         rect = patches.Rectangle((x_onder, 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85)
         ax.add_patch(rect)
-        ax.text(x_onder + (item["L"]/2), 20 + (item["B"]/2), item["naam"], color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=10)
+        ax.text(x_onder + (item["L"]/2), 20 + (item["B"]/2), item["naam"], color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         x_onder += item["L"]
     else:
         vulling_kleur = "#ff0000" if (x_boven + item["L"] > max_lengte) else item["kleur"]
         rect = patches.Rectangle((x_boven, max_breedte - item["B"] - 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85)
         ax.add_patch(rect)
-        ax.text(x_boven + (item["L"]/2), max_breedte - item["B"] - 20 + (item["B"]/2), item["naam"], color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=10)
+        ax.text(x_boven + (item["L"]/2), max_breedte - item["B"] - 20 + (item["B"]/2), item["naam"], color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         x_boven += item["L"]
     idx += 1
 
