@@ -6,7 +6,7 @@ import matplotlib.patches as patches
 def toon_magazijn_tab():
     st.markdown("""
     <div class="modern-header">
-        <div class="modern-title">MAGAZIJN STAPELING <span style="font-weight:400; font-size:1.3rem;">| Visueel op Pallets</span></div>
+        <div class="modern-title">STAPELING <span style="font-weight:400; font-size:1.3rem;">| Visueel</span></div>
         <div class="modern-subtitle">Overzicht en stapelberekening</div>
     </div>
 """, unsafe_allow_html=True)
