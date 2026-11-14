@@ -1,5 +1,6 @@
 import streamlit as st
 import math
+import io
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
@@ -40,13 +41,6 @@ st.markdown("""
             font-weight: 500;
             letter-spacing: 0.3px;
         }
-        @media print {
-            @page { size: landscape; margin: 1cm; }
-            .block-container { padding-top: 0.5rem !important; }
-            header, [data-testid="stToolbar"], button, [data-testid="stNumberInput"], [data-testid="stExpander"], iframe {
-                display: none !important;
-            }
-        }
     </style>
     <div class="modern-header">
         <div class="modern-title">FONS LAADPLAN <span style="font-weight:400; font-size:1.3rem;">| 2.0</span></div>
@@ -72,7 +66,6 @@ product_info = {
     "IBC": {"lengte": 1000, "breedte": 1200, "kleur": "#f1c40f", "stapelbaar": False, "label": "IBC"},
     "Maatwerk": {"lengte": 1000, "breedte": 1000, "kleur": "#7f8c8d", "stapelbaar": False, "label": "Maatwerk"}
 }
-
 col_titel, col_wis = st.columns(2)
 with col_titel: st.write("### 2. Vul aantal pallets in:")
 with col_wis:
@@ -110,6 +103,7 @@ with col5:
         mw_B = st.number_input("B (mm):", min_value=1, value=1000, step=10, key=f"mw_b_{st.session_state.reset_id}")
         product_info["Maatwerk"]["lengte"] = mw_L
         product_info["Maatwerk"]["breedte"] = mw_B
+
 as_v_cp3, as_a_cp3 = 0, 0
 as_v_cp7_600, as_a_cp7_600 = 0, 0
 as_v_cp7_750, as_a_cp7_750 = 0, 0
@@ -154,7 +148,6 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
             if pallets_mw > 0:
                 as_v_mw = st.number_input("MW VOR", min_value=0, max_value=pallets_mw, value=0, step=1, key=f"v_mw_{st.session_state.reset_id}")
                 as_a_mw = st.number_input("MW ACH", min_value=0, max_value=pallets_mw - as_v_mw, value=0, step=1, key=f"a_mw_{st.session_state.reset_id}")
-
 hoofd_cp7_600 = max(0, pallets_cp7_600_totaal - as_v_cp7_600 - as_a_cp7_600)
 if pallets_cp7_600_totaal > 0 and "CP7_600" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP7_600")
 
@@ -295,26 +288,18 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     st.pyplot(fig, use_container_width=True)
     st.write(f"**Geladen:** {totale_meters} mm van {max_lengte} mm.")
     st.write("💡 **Legenda:** Blauw=CP3 | Groen=CP7 600kg | Rood=CP7 750kg | Geel=IBC | Grijs=Maatwerk | FELROOD=Past Niet")
-    
-    st.components.v1.html("""
-        <button onclick="window.parent.print()" style="
-            background-color: #0f172a;
-            color: white;
-            border: 2px solid #38bdf8;
-            padding: 10px 22px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 15px;
-            cursor: pointer;
-            margin-top: 6px;
-        ">
-            🖨️ Print Laadplan
-        </button>
-    """, height=60)
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=200, bbox_inches="tight")
+    st.download_button(
+        label="📸 Download Laadplan (Afbeelding)",
+        data=buf.getvalue(),
+        file_name="fons_laadplan.png",
+        mime="image/png"
+    )
 else:
     st.info("Container is leeg. Gebruik de + en - knoppen om te beginnen.")
 
 st.divider()
 from magazijn import toon_magazijn_tab
 toon_magazijn_tab()
-
