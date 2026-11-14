@@ -38,17 +38,16 @@ def toon_magazijn_tab():
     rijen_b = math.ceil(totaal_vloerplaatsen / 4)
     benutting_b = round((totaal_vloerplaatsen / (rijen_b * 4)) * 100)
 
-    if rijen_b < rijen_a:
-        st.success(f"💡 **Beste keuze (minste breedte): Kant B (4 diep)** — Je gebruikt maar **{rijen_b} rijen naast elkaar** (~{rijen_b * 1.20:.1f} m breed, tegenover {rijen_a} rijen aan Kant A).")
-    elif rijen_a < rijen_b:
-        st.success(f"💡 **Beste keuze (minste breedte): Kant A (3 diep)** — Je gebruikt maar **{rijen_a} rijen naast elkaar** (~{rijen_a * 1.20:.1f} m breed, tegenover {rijen_b} rijen aan Kant B).")
+    if benutting_a > benutting_b:
+        st.success(f"💡 **Beste keuze (strakste vulling): Kant A (3 diep)** — Je benut de rijen voor **{benutting_a}%** (tegenover {benutting_b}% aan Kant B), met **{rijen_a} rijen** (~{rijen_a * 1.20:.1f} m breed).")
+    elif benutting_b > benutting_a:
+        st.success(f"💡 **Beste keuze (strakste vulling): Kant B (4 diep)** — Je benut de rijen voor **{benutting_b}%** (tegenover {benutting_a}% aan Kant A), met **{rijen_b} rijen** (~{rijen_b * 1.20:.1f} m breed).")
     else:
-        if benutting_a >= benutting_b:
-            st.success(f"💡 **Beste keuze: Kant A (3 diep)** — Beide kanten gebruiken **{rijen_a} rijen breed** (~{rijen_a * 1.20:.1f} m), maar Kant A benut de rijen strakker ({benutting_a}% tegenover {benutting_b}%).")
+        if rijen_b < rijen_a:
+            st.success(f"💡 **Beste keuze (minste breedte): Kant B (4 diep)** — Beide kanten zijn **{benutting_b}%** gevuld, maar Kant B gebruikt maar **{rijen_b} rijen** (~{rijen_b * 1.20:.1f} m breed).")
         else:
-            st.success(f"💡 **Beste keuze: Kant B (4 diep)** — Beide kanten gebruiken **{rijen_b} rijen breed** (~{rijen_b * 1.20:.1f} m), maar Kant B benut de rijen strakker ({benutting_b}% tegenover {benutting_a}%).")
+            st.success(f"💡 **Beste keuze (minste breedte): Kant A (3 diep)** — Beide kanten zijn **{benutting_a}%** gevuld, met **{rijen_a} rijen** (~{rijen_a * 1.20:.1f} m breed).")
 
-    col_a, col_b = st.columns(2)
     def teken_pallet_stapel(ax, x, y, breedte, hoogte, h_nu, max_h):
         if h_nu == 0:
             ax.add_patch(patches.Rectangle((x, y), breedte, hoogte, linewidth=1.2, linestyle="--", edgecolor="#94a3b8", facecolor="#f8fafc"))
