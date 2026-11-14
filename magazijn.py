@@ -1,103 +1,108 @@
-import streamlit as st
 import math
-import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import matplotlib.pyplot as plt
+import streamlit as st
+
 
 def toon_magazijn_tab():
-    st.markdown("""
+    st.markdown(
+        """
     <div class="modern-header">
         <div class="modern-title">MAGAZIJN STAPELING <span style="font-weight:400; font-size:1.3rem;">| Visueel op Pallets</span></div>
-        <div class="modern-subtitle">Overzicht en stapelberekening per artikel (stabiele rijen aan het gangpad)</div>
+        <div class="modern-subtitle">Overzicht en stapelberekening per artikel (volledige lijnen gelijk, rest aan het gangpad)</div>
     </div>
-""", unsafe_allow_html=True)
+""",
+        unsafe_allow_html=True,
+    )
 
     mc1, mc2 = st.columns(2)
     with mc1:
         st.write("### 1. Aantal pallets van dit artikel:")
-        aantal_stuks = st.number_input("Aantal pallets van dit artikel:", min_value=1, value=66, step=1, label_visibility="collapsed")
+        aantal_stuks = st.number_input(
+            "Aantal pallets van dit artikel:",
+            min_value=1,
+            value=68,
+            step=1,
+            label_visibility="collapsed",
+        )
     with mc2:
         st.write("### 2. Max. stapelhoogte (lagen):")
-        max_stapel = st.number_input("Max. stapelhoogte (lagen):", min_value=1, max_value=8, value=4, step=1, label_visibility="collapsed")
+        max_stapel = st.number_input(
+            "Max. stapelhoogte (lagen):",
+            min_value=1,
+            max_value=8,
+            value=4,
+            step=1,
+            label_visibility="collapsed",
+        )
 
-    def maak_stabiele_rest(pallets, aantal_plekken, max_h):
-        resultaat = [0] * aantal_plekken
-        if pallets <= 0 or aantal_plekken <= 0:
-            return resultaat
+    def vul_gangpad_lijn(pallets, plekken, max_h):
+        lijn = [0] * plekken
+        if pallets <= 0 or plekken <= 0:
+            return lijn
 
-        # Zoek de beste gelijke hoogte (bijv. zoveel mogelijk 3H) die in deze plekken past
-        beste_h = None
-        for h_kandidaat in range(max_h - 1, 1, -1):
-            # Kijk hoeveel stapels van h_kandidaat we kunnen maken
-            aantal_k = pallets // h_kandidaat
-            rest_k = pallets % h_kandidaat
-            benodigd_k = aantal_k + (1 if rest_k > 0 else 0)
-            if benodigd_k <= aantal_plekken and rest_k != 1:
-                beste_h = h_kandidaat
-                break
+        min_k = math.ceil(pallets / max_h)
+        for k in range(min_k, plekken + 1):
+            if pallets % k == 0:
+                h_gelijk = pallets // k
+                if 2 <= h_gelijk <= max_h:
+                    for i in range(k):
+                        lijn[i] = h_gelijk
+                    return lijn
 
-        if beste_h is not None:
-            aantal_k = pallets // beste_h
-            rest_k = pallets % beste_h
-            temp = [beste_h] * aantal_k
-            if rest_k > 0:
-                temp.append(rest_k)
-            for i, val in enumerate(temp):
-                resultaat[i] = val
-            return resultaat
+        for k in range(min_k, plekken + 1):
+            basis = pallets // k
+            extra = pallets % k
+            if basis >= 2 and (basis + (1 if extra > 0 else 0)) <= max_h:
+                temp = [basis + 1] * extra + [basis] * (k - extra)
+                for i, val in enumerate(temp):
+                    lijn[i] = val
+                return lijn
 
-        # Fallback: verdeel in zoveel mogelijk gelijke paren
         pallets_in_paren = pallets - (pallets % 2)
         enkele = pallets % 2
-        k_paren = max(2, math.ceil(pallets_in_paren / max_h))
-        if k_paren % 2 == 1:
-            k_paren += 1
-        k_paren = min(k_paren, aantal_plekken - (1 if enkele else 0))
-        if k_paren % 2 == 1:
-            k_paren -= 1
+        idx = 0
+        if pallets_in_paren >= 2 and plekken >= 2:
+            paar_h = min(max_h, pallets_in_paren // 2)
+            lijn[0] = paar_h
+            lijn[1] = paar_h
+            pallets_in_paren -= paar_h * 2
+            idx = 2
+        rest_totaal = pallets_in_paren + enkele
+        while rest_totaal > 0 and idx < plekken:
+            zet = min(max_h, rest_totaal)
+            lijn[idx] = zet
+            rest_totaal -= zet
+            idx += 1
 
-        temp = []
-        if k_paren >= 2 and pallets_in_paren > 0:
-            paren = k_paren // 2
-            eenheden = pallets_in_paren // 2
-            while eenheden > paren * max_h:
-                eenheden -= 1
-                enkele += 2
-            b_p = eenheden // paren
-            e_p = eenheden % paren
-            for p in range(paren):
-                h_p = b_p + (1 if p < e_p else 0)
-                temp.extend([h_p, h_p])
-        while enkele > 0 and len(temp) < aantal_plekken:
-            zet = min(max_h, enkele)
-            temp.append(zet)
-            enkele -= zet
-
-        for i, val in enumerate(temp):
-            resultaat[i] = val
-        return resultaat
+        return lijn
 
     def bereken_verdeling(totaal_pallets, max_h, diepte):
         min_plekken = math.ceil(totaal_pallets / max_h)
         aantal_rijen = math.ceil(min_plekken / diepte)
         totaal_plekken = aantal_rijen * diepte
 
-        volle_lagen = min(diepte - 1, totaal_pallets // (aantal_rijen * max_h))
-        pallets_achter = volle_lagen * aantal_rijen * max_h
+        volle_lagen_max = min(diepte - 1, totaal_pallets // (aantal_rijen * max_h))
+        pallets_achter = volle_lagen_max * aantal_rijen * max_h
         rest_pallets = totaal_pallets - pallets_achter
-        vrije_plekken_voor = (diepte - volle_lagen) * aantal_rijen
 
-        # Als er een volle laag tegen de muur staat en de voorste rij heeft minder dan de helft gevuld op max_h,
-        # betrek dan de voorlaatste laag erbij om er zoveel mogelijk stabiele 3H-stapels van te maken
-        if volle_lagen >= 1 and max_h >= 3 and rest_pallets > 0:
-            min_plekken_voor = math.ceil(rest_pallets / max_h)
-            if min_plekken_voor <= aantal_rijen // 2:
-                volle_lagen -= 1
-                pallets_achter = volle_lagen * aantal_rijen * max_h
-                rest_pallets = totaal_pallets - pallets_achter
-                vrije_plekken_voor = (diepte - volle_lagen) * aantal_rijen
+        achterste_lijnen = []
+        for _ in range(volle_lagen_max):
+            achterste_lijnen.extend([max_h] * aantal_rijen)
 
-        voorste_deel = maak_stabiele_rest(rest_pallets, vrije_plekken_voor, max_h)
-        alle_hoogtes = ([max_h] * (volle_lagen * aantal_rijen)) + voorste_deel
+        if volle_lagen_max >= 1 and max_h >= 3 and rest_pallets > 0:
+            nieuwe_rest = rest_pallets + aantal_rijen
+            if nieuwe_rest <= aantal_rijen * max_h:
+                huidige_plekken_nodig = math.ceil(rest_pallets / max_h)
+                if huidige_plekken_nodig <= aantal_rijen // 2:
+                    achterste_lijnen = ([max_h] * ((volle_lagen_max - 1) * aantal_rijen)) + ([max_h - 1] * aantal_rijen)
+                    rest_pallets = nieuwe_rest
+
+        aantal_achterste_lijnen = len(achterste_lijnen) // aantal_rijen
+        lege_tussenlijnen = (diepte - 1) - aantal_achterste_lijnen
+
+        gangpad_lijn = vul_gangpad_lijn(rest_pallets, aantal_rijen, max_h)
+        alle_hoogtes = achterste_lijnen + ([0] * (lege_tussenlijnen * aantal_rijen)) + gangpad_lijn
 
         gebruikte_plekken = sum(1 for h in alle_hoogtes if h > 0)
         benutting = round((gebruikte_plekken / totaal_plekken) * 100)
