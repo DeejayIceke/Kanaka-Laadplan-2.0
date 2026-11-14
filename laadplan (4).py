@@ -108,7 +108,7 @@ with col1:
         st.session_state.klik_volgorde.append("CP3")
 
 with col2:
-    st.markdown('<div class="custom-box" style="background-color:#2ecc71;">CP7 (1400x1100)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="custom-box" style="background-color:#2ecc71;">CP7 (1400x1200)</div>', unsafe_allow_html=True)
     pallets_cp7_totaal = st.number_input("Aantal CP7", min_value=0, value=0, step=1, key=f"cp7_{st.session_state.reset_id}", label_visibility="collapsed")
 
 with col3:
@@ -140,7 +140,7 @@ as_v_ibc, as_a_ibc = 0, 0
 as_v_cp9, as_a_cp9 = 0, 0
 as_v_mw, as_a_mw = 0, 0
 
-richting_v_cp7 = "Lang (1400x1100)"
+richting_v_cp7 = "Lang (1400x1200)"
 richting_a_cp7 = "Lang (1400x1100)"
 
 if pallets_cp3 + pallets_cp7_totaal + pallets_ibc + pallets_cp9 + pallets_mw > 0:
@@ -154,11 +154,11 @@ if pallets_cp3 + pallets_cp7_totaal + pallets_ibc + pallets_cp9 + pallets_mw > 0
             if pallets_cp7_totaal > 0:
                 as_v_cp7 = st.number_input("CP7 VOR", min_value=0, max_value=pallets_cp7_totaal, value=0, step=1, key=f"v_cp7_{st.session_state.reset_id}")
                 if as_v_cp7 > 0:
-                    richting_v_cp7 = st.radio("Richting VOR:", ["Lang (1400x1100)", "Smal (1100x1400)"], key=f"r_v_cp7_{st.session_state.reset_id}")
+                    richting_v_cp7 = st.radio("Richting VOR:", ["Lang (1400x1100)", "Smal (1200x1400)"], key=f"r_v_cp7_{st.session_state.reset_id}")
 
                 as_a_cp7 = st.number_input("CP7 ACH", min_value=0, max_value=pallets_cp7_totaal - as_v_cp7, value=0, step=1, key=f"a_cp7_{st.session_state.reset_id}")
                 if as_a_cp7 > 0:
-                    richting_a_cp7 = st.radio("Richting ACH:", ["Lang (1400x1100)", "Smal (1100x1400)"], key=f"r_a_cp7_{st.session_state.reset_id}")
+                    richting_a_cp7 = st.radio("Richting ACH:", ["Lang (1400x1100)", "Smal (1200x1400)"], key=f"r_a_cp7_{st.session_state.reset_id}")
         with v_col3:
             if pallets_ibc > 0:
                 as_v_ibc = st.number_input("IBC VOR", min_value=0, max_value=pallets_ibc, value=0, step=1, key=f"v_ibc_{st.session_state.reset_id}")
@@ -192,7 +192,7 @@ def voeg_partij_toe_aslast(art_naam, aantal, richting):
     if aantal > 0:
         info = product_info[art_naam].copy()
         if art_naam == "CP7" and "Smal" in richting:
-            info["lengte"], info["breedte"], info["kleur"] = 1100, 1400, "#9b59b6"
+            info["lengte"], info["breedte"], info["kleur"] = 1200, 1400, "#9b59b6"
 
         vloer = int(math.ceil(aantal / 2)) if info["stapelbaar"] else int(aantal)
         overgebleven = aantal
