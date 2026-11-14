@@ -49,18 +49,18 @@ def toon_magazijn_tab():
             ax.text(x + breedte / 2, y + hoogte / 2, "Vrij", ha="center", va="center", fontweight="bold", fontsize=9, color="#94a3b8")
             return
 
-        # 1. Houten pallet onderaan tekenen (strak zonder tussenruimte)
+        # 1. Houten pallet onderaan (exacte volledige breedte)
         p_hoogte = hoogte * 0.20
         bovenplank_h = p_hoogte * 0.36
         klos_h = p_hoogte * 0.64
 
-        ax.add_patch(patches.Rectangle((x + 0.02, y + klos_h), breedte - 0.04, bovenplank_h, linewidth=1, edgecolor="#5c3a21", facecolor="#c89d7c"))
+        ax.add_patch(patches.Rectangle((x, y + klos_h), breedte, bovenplank_h, linewidth=1, edgecolor="#5c3a21", facecolor="#c89d7c"))
 
-        klos_b = (breedte - 0.04) * 0.18
-        for klos_x in [x + 0.02, x + breedte / 2 - klos_b / 2, x + breedte - 0.02 - klos_b]:
+        klos_b = breedte * 0.18
+        for klos_x in [x, x + breedte / 2 - klos_b / 2, x + breedte - klos_b]:
             ax.add_patch(patches.Rectangle((klos_x, y), klos_b, klos_h, linewidth=1, edgecolor="#5c3a21", facecolor="#8d5b3c"))
 
-        # 2. Volledig blok lading direct bovenop de pallet (zonder witte lijnen ertussen)
+        # 2. Volledig doorlopend groen blok (exact even breed als de pallet, zonder witte lijnen)
         lading_y_start = y + p_hoogte
         beschikbare_hoogte = hoogte - p_hoogte
         totale_lading_h = beschikbare_hoogte * (h_nu / max_h)
@@ -68,9 +68,9 @@ def toon_magazijn_tab():
         kleur_lading = "#1b5e20" if h_nu == max_h else "#2ecc71"
         tekst_kleur = "white" if h_nu == max_h else "black"
 
-        ax.add_patch(patches.Rectangle((x + 0.03, lading_y_start), breedte - 0.06, totale_lading_h, linewidth=1, edgecolor="#144517", facecolor=kleur_lading))
+        ax.add_patch(patches.Rectangle((x, lading_y_start), breedte, totale_lading_h, linewidth=1, edgecolor="#144517", facecolor=kleur_lading))
 
-        # 3. Label in het midden van het blok
+        # 3. Label in het midden van het groene blok
         ax.text(x + breedte / 2, lading_y_start + totale_lading_h / 2, f"{h_nu}H", ha="center", va="center", fontweight="bold", fontsize=10, color=tekst_kleur)
 
     def teken_kant(kolom, titel, diepte, aantal_rijen, benutting):
@@ -107,11 +107,11 @@ def toon_magazijn_tab():
             ax.set_ylim(-0.35, diepte * stap_y + 0.65)
             ax.axis('off')
 
-            # Muur bovenaan (compacter)
+            # Muur bovenaan
             ax.plot([0.1, aantal_rijen * stap_x], [diepte * stap_y + 0.35, diepte * stap_y + 0.35], color="#334155", linewidth=4)
             ax.text((aantal_rijen * stap_x) / 2, diepte * stap_y + 0.45, "🧱 MUUR (Achterkant)", ha="center", va="bottom", fontweight="bold", fontsize=10, color="#334155")
 
-            # Gangpad onderaan (compacter)
+            # Gangpad onderaan
             ax.text((aantal_rijen * stap_x) / 2, -0.25, "⬇️ GANGPAD (Voorkant) ⬇️", ha="center", va="top", fontweight="bold", fontsize=10, color="#64748b")
 
             for r in range(aantal_rijen):
