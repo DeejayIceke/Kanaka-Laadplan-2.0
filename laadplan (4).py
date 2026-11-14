@@ -58,7 +58,7 @@ with col2:
     pallets_cp7_600_totaal = st.number_input("Aantal CP7 600", min_value=0, value=0, step=1, key=f"cp7_600_{st.session_state.reset_id}", label_visibility="collapsed")
 
 with col3:
-    st.markdown('<div class="custom-box" style="background-color:#c0392b;">CP7 750kg (1400x1200)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="custom-box" style="background-color:#ff8a80;">CP7 750kg (1400x1200)</div>', unsafe_allow_html=True)
     pallets_cp7_750_totaal = st.number_input("Aantal CP7 750", min_value=0, value=0, step=1, key=f"cp7_750_{st.session_state.reset_id}", label_visibility="collapsed")
 
 with col4:
@@ -168,9 +168,9 @@ def voeg_partij_toe(art_naam, aantal):
             elif art_naam == "CP7_600":
                 gekozen_kleur = "#00ff66"
             elif art_naam == "CP7_750" and overgebleven >= 2:
-                gekozen_kleur = "#800000"
+                gekozen_kleur = "#ff7675"
             elif art_naam == "CP7_750":
-                gekozen_kleur = "#ff6b6b"
+                gekozen_kleur = "#ffcdd2"
             else:
                 gekozen_kleur = info["kleur"]
 
