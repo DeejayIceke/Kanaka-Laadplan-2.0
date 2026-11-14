@@ -1,80 +1,53 @@
-import math
-import matplotlib.patches as patches
-import matplotlib.pyplot as plt
 import streamlit as st
-
+import math
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 def toon_magazijn_tab():
-    st.markdown(
-        """
+    st.markdown("""
     <div class="modern-header">
         <div class="modern-title">MAGAZIJN STAPELING <span style="font-weight:400; font-size:1.3rem;">| Visueel op Pallets</span></div>
         <div class="modern-subtitle">Overzicht en stapelberekening per artikel (volledige lijnen gelijk, rest aan het gangpad)</div>
     </div>
-""",
-        unsafe_allow_html=True,
-    )
+""", unsafe_allow_html=True)
 
     mc1, mc2 = st.columns(2)
     with mc1:
         st.write("### 1. Aantal pallets van dit artikel:")
-        aantal_stuks = st.number_input(
-            "Aantal pallets van dit artikel:",
-            min_value=1,
-            value=68,
-            step=1,
-            label_visibility="collapsed",
-        )
+        aantal_stuks = st.number_input("Aantal pallets van dit artikel:", min_value=1, value=68, step=1, label_visibility="collapsed")
     with mc2:
         st.write("### 2. Max. stapelhoogte (lagen):")
-        max_stapel = st.number_input(
-            "Max. stapelhoogte (lagen):",
-            min_value=1,
-            max_value=8,
-            value=4,
-            step=1,
-            label_visibility="collapsed",
-        )
+        max_stapel = st.number_input("Max. stapelhoogte (lagen):", min_value=1, max_value=8, value=4, step=1, label_visibility="collapsed")
 
-    def vul_gangpad_lijn(pallets, plekken, max_h):
-        lijn = [0] * plekken
+    def vul_gangpad_lijn(pallets, plekken, max_toegestane_h):
+        lijn = * plekken
         if pallets <= 0 or plekken <= 0:
             return lijn
 
-        min_k = math.ceil(pallets / max_h)
-        for k in range(min_k, plekken + 1):
-            if pallets % k == 0:
-                h_gelijk = pallets // k
-                if 2 <= h_gelijk <= max_h:
-                    for i in range(k):
-                        lijn[i] = h_gelijk
-                    return lijn
+        # Gebruik zoveel mogelijk plekken op de gangpadlijn zodat er geen lege plekken overblijven als dat niet hoeft,
+        # maar houd elke stapel minimaal 2H (tenzij er maar 1 pallet is) en nooit hoger dan max_toegestane_h
+        max_bruikbare_plekken = min(plekken, pallets // 2) if pallets >= 2 else 1
+        min_nodige_plekken = math.ceil(pallets / max_toegestane_h)
+        k = max(min_nodige_plekken, max_bruikbare_plekken)
+        k = min(k, plekken)
 
-        for k in range(min_k, plekken + 1):
+        if k > 0:
             basis = pallets // k
             extra = pallets % k
-            if basis >= 2 and (basis + (1 if extra > 0 else 0)) <= max_h:
+            if basis + (1 if extra > 0 else 0) <= max_toegestane_h:
                 temp = [basis + 1] * extra + [basis] * (k - extra)
                 for i, val in enumerate(temp):
                     lijn[i] = val
                 return lijn
 
-        pallets_in_paren = pallets - (pallets % 2)
-        enkele = pallets % 2
-        idx = 0
-        if pallets_in_paren >= 2 and plekken >= 2:
-            paar_h = min(max_h, pallets_in_paren // 2)
-            lijn[0] = paar_h
-            lijn[1] = paar_h
-            pallets_in_paren -= paar_h * 2
-            idx = 2
-        rest_totaal = pallets_in_paren + enkele
-        while rest_totaal > 0 and idx < plekken:
-            zet = min(max_h, rest_totaal)
-            lijn[idx] = zet
-            rest_totaal -= zet
-            idx += 1
-
+        # Fallback: vul van links naar rechts tot max_toegestane_h
+        over = pallets
+        for i in range(plekken):
+            zet = min(max_toegestane_h, over)
+            lijn[i] = zet
+            over -= zet
+            if over == 0:
+                break
         return lijn
 
     def bereken_verdeling(totaal_pallets, max_h, diepte):
@@ -90,19 +63,25 @@ def toon_magazijn_tab():
         for _ in range(volle_lagen_max):
             achterste_lijnen.extend([max_h] * aantal_rijen)
 
+        hoogte_voorlaatste_lijn = max_h
+
+        # Controleer of we de laatste volle lijn tegen de muur beter 1 niveau lager (bijv. 3H i.p.v. 4H) zetten
+        # zodat de gangpadlijn ook goed gevuld is (en nooit hoger wordt dan de lijn erachter)
         if volle_lagen_max >= 1 and max_h >= 3 and rest_pallets > 0:
             nieuwe_rest = rest_pallets + aantal_rijen
-            if nieuwe_rest <= aantal_rijen * max_h:
+            nieuwe_max_gangpad = max_h - 1
+            if nieuwe_rest <= aantal_rijen * nieuwe_max_gangpad:
                 huidige_plekken_nodig = math.ceil(rest_pallets / max_h)
                 if huidige_plekken_nodig <= aantal_rijen // 2:
-                    achterste_lijnen = ([max_h] * ((volle_lagen_max - 1) * aantal_rijen)) + ([max_h - 1] * aantal_rijen)
+                    achterste_lijnen = ([max_h] * ((volle_lagen_max - 1) * aantal_rijen)) + ([nieuwe_max_gangpad] * aantal_rijen)
                     rest_pallets = nieuwe_rest
+                    hoogte_voorlaatste_lijn = nieuwe_max_gangpad
 
         aantal_achterste_lijnen = len(achterste_lijnen) // aantal_rijen
         lege_tussenlijnen = (diepte - 1) - aantal_achterste_lijnen
 
-        gangpad_lijn = vul_gangpad_lijn(rest_pallets, aantal_rijen, max_h)
-        alle_hoogtes = achterste_lijnen + ([0] * (lege_tussenlijnen * aantal_rijen)) + gangpad_lijn
+        gangpad_lijn = vul_gangpad_lijn(rest_pallets, aantal_rijen, hoogte_voorlaatste_lijn)
+        alle_hoogtes = achterste_lijnen + (* (lege_tussenlijnen * aantal_rijen)) + gangpad_lijn
 
         gebruikte_plekken = sum(1 for h in alle_hoogtes if h > 0)
         benutting = round((gebruikte_plekken / totaal_plekken) * 100)
