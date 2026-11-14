@@ -32,14 +32,28 @@ def toon_magazijn_tab():
         voorste_rij = [0] * vrije_plekken_voor
 
         if rest_pallets > 0:
-            aantal_paren = vrije_plekken_voor // 2
-            pallets_voor_paren = rest_pallets - (rest_pallets % 2)
+            # Bereken hoeveel paren we nodig hebben en op welke hoogte (bijv. 13 pallets -> 2 paren van 3H + 1 losse 1H)
+            min_nodig = math.ceil(rest_pallets / max_h)
+            # Rond naar boven af op een even aantal voor stabiele paren, maar laat indien mogelijk 1 plek vrij voor een losse restpallet
+            pallets_in_paren = rest_pallets - (rest_pallets % 2)
             enkele_pallet = rest_pallets % 2
 
-            # Verdeel de paren gelijkmatig over alle beschikbare paren van links naar rechts (bijv. 3H, 3H, 3H, 3H)
-            if aantal_paren > 0 and pallets_voor_paren > 0:
-                totaal_paar_eenheden = pallets_voor_paren // 2
-                # Zorg dat geen enkel paar boven max_h uitkomt
+            # Zoek het kleinste even aantal plekken dat groot genoeg is voor pallets_in_paren (maar nog ruimte laat voor enkele_pallet)
+            max_plekken_voor_paren = vrije_plekken_voor - (1 if enkele_pallet > 0 else 0)
+            if max_plekken_voor_paren % 2 == 1:
+                max_plekken_voor_paren -= 1
+
+            # Gebruik zoveel paren als nodig zodat de hoogte mooi hoog is (bijv. 3H i.p.v. 2H)
+            benodigde_paar_plekken = math.ceil(pallets_in_paren / max_h)
+            if benodigde_paar_plekken % 2 == 1:
+                benodigde_paar_plekken += 1
+            if benodigde_paar_plekken < 2 and pallets_in_paren > 0:
+                benodigde_paar_plekken = 2
+            benodigde_paar_plekken = min(benodigde_paar_plekken, max_plekken_voor_paren)
+
+            if benodigde_paar_plekken >= 2 and pallets_in_paren > 0:
+                aantal_paren = benodigde_paar_plekken // 2
+                totaal_paar_eenheden = pallets_in_paren // 2
                 while totaal_paar_eenheden > aantal_paren * max_h:
                     totaal_paar_eenheden -= 1
                     enkele_pallet += 2
@@ -52,7 +66,6 @@ def toon_magazijn_tab():
                     voorste_rij[p * 2] = h_paar
                     voorste_rij[p * 2 + 1] = h_paar
 
-            # Plaats eventuele losse pallet(s) op de eerste vrije plek na de paren
             if enkele_pallet > 0:
                 for i in range(vrije_plekken_voor):
                     if voorste_rij[i] == 0:
