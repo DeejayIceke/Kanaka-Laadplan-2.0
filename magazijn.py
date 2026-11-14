@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 def toon_magazijn_tab():
-    st.subheader("🏭 Magazijn Stapeling — Visueel op Pallets")
+    st.subheader("Magazijn Stapeling — Visueel op Pallets")
 
     mc1, mc2 = st.columns(2)
     with mc1:
