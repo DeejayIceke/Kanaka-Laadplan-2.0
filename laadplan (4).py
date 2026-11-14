@@ -156,26 +156,51 @@ def voeg_partij_toe_aslast(art_naam, aantal, richting):
             overgebleven -= 2
             laad_lijst.append({"naam": f"{info['label']}{h_label}", "naam_puur": art_naam, "L": info["lengte"], "B": info["breedte"], "kleur": info["kleur"], "force_midden": True})
 
+def voeg_partij_toe_aslast(art_naam, aantal, richting):
+    if aantal > 0:
+        info = product_info[art_naam].copy()
+        if "Smal" in richting:
+            info["lengte"], info["breedte"] = info["breedte"], info["lengte"]
+            if art_naam == "CP7_600":
+                info["kleur"] = "#9b59b6"
+            elif art_naam == "CP7_750":
+                info["kleur"] = "#e84393"
+
+        vloer = int(math.ceil(aantal / 2)) if info["stapelbaar"] else int(aantal)
+        overgebleven = aantal
+        for _ in range(vloer):
+            is_2h = info["stapelbaar"] and overgebleven >= 2
+            if art_naam == "CP7_600":
+                naam_tekst = "CP7 (2H)\n1200kg" if is_2h else "CP7 (1H)\n600kg"
+            elif art_naam == "CP7_750":
+                naam_tekst = "CP7 (2H)\n1500kg" if is_2h else "CP7 (1H)\n750kg"
+            else:
+                h_label = " (2H)" if is_2h else (" (1H)" if info["stapelbaar"] else "")
+                naam_tekst = f"{info['label']}{h_label}"
+
+            overgebleven -= 2
+            laad_lijst.append({"naam": naam_tekst, "naam_puur": art_naam, "L": info["lengte"], "B": info["breedte"], "kleur": info["kleur"], "force_midden": True})
+
 def voeg_partij_toe(art_naam, aantal):
     if aantal > 0:
         info = product_info[art_naam]
         vloer = int(math.ceil(aantal / 2)) if info["stapelbaar"] else int(aantal)
         overgebleven = aantal
         for _ in range(vloer):
-            h_label = " (2H)" if info["stapelbaar"] and overgebleven >= 2 else (" (1H)" if info["stapelbaar"] else "")
-            if art_naam == "CP7_600" and overgebleven >= 2:
-                gekozen_kleur = "#1b5e20"
-            elif art_naam == "CP7_600":
-                gekozen_kleur = "#00ff66"
-            elif art_naam == "CP7_750" and overgebleven >= 2:
-                gekozen_kleur = "#ff7675"
+            is_2h = info["stapelbaar"] and overgebleven >= 2
+            if art_naam == "CP7_600":
+                naam_tekst = "CP7 (2H)\n1200kg" if is_2h else "CP7 (1H)\n600kg"
+                gekozen_kleur = "#1b5e20" if is_2h else "#00ff66"
             elif art_naam == "CP7_750":
-                gekozen_kleur = "#ffcdd2"
+                naam_tekst = "CP7 (2H)\n1500kg" if is_2h else "CP7 (1H)\n750kg"
+                gekozen_kleur = "#ff7675" if is_2h else "#ffcdd2"
             else:
+                h_label = " (2H)" if is_2h else (" (1H)" if info["stapelbaar"] else "")
+                naam_tekst = f"{info['label']}{h_label}"
                 gekozen_kleur = info["kleur"]
 
             overgebleven -= 2
-            laad_lijst.append({"naam": f"{info['label']}{h_label}", "naam_puur": art_naam, "L": info["lengte"], "B": info["breedte"], "kleur": gekozen_kleur, "force_midden": False})
+            laad_lijst.append({"naam": naam_tekst, "naam_puur": art_naam, "L": info["lengte"], "B": info["breedte"], "kleur": gekozen_kleur, "force_midden": False})
 
 voeg_partij_toe_aslast("CP3", as_v_cp3, "Lang")
 voeg_partij_toe_aslast("CP7_600", as_v_cp7_600, richting_v_cp7_600)
