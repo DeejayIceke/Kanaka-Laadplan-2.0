@@ -83,12 +83,11 @@ def toon_magazijn_tab():
 
     def teken_kant(kolom, titel, diepte, aantal_rijen, benutting):
         totaal_plekken = aantal_rijen * diepte
-        lege_plekken = * (totaal_plekken - len(basis_hoogtes))
+        lege_plekken = [0] * (totaal_plekken - len(basis_hoogtes))
         hoogtes = basis_hoogtes + lege_plekken
 
         benodigde_meters = aantal_rijen * 1.20
 
-        # Vul eerst de volle rijen (4H) van achter naar voor, zodat 3H en 2H altijd vooraan bij het gangpad overblijven
         grid = [[0 for _ in range(diepte)] for _ in range(aantal_rijen)]
         idx = 0
         for r_paar in range(0, aantal_rijen, 2):
@@ -100,10 +99,9 @@ def toon_magazijn_tab():
                     grid[r_paar + 1][d] = hoogtes[idx]
                     idx += 1
 
-        # Sorteer elke rij van hoog naar laag (van muur naar gangpad), zodat lagere stapels (3H, 2H) altijd vooraan staan
         for r in range(aantal_rijen):
             gevuld = sorted([h for h in grid[r] if h > 0], reverse=True)
-            grid[r] = gevuld + * (diepte - len(gevuld))
+            grid[r] = gevuld + [0] * (diepte - len(gevuld))
 
         tellingen = []
         for h in range(max_stapel, 0, -1):
