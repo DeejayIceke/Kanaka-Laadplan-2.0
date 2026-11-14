@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 def toon_magazijn_tab():
-    st.subheader("🏭 Magazijn Stapeling — Plattegrond (4H achteraan tegen muur, min. 2H)")
+    st.subheader("🏭 Magazijn Stapeling — Per rij dezelfde hoogte voor steun")
 
     mc1, mc2 = st.columns(2)
     with mc1:
@@ -33,60 +33,63 @@ def toon_magazijn_tab():
 
     col_a, col_b = st.columns(2)
 
-    def maak_grid_vanaf_muur(stuks, aantal_rijen, diepte, max_h):
+    def maak_stabiele_rijen(stuks, aantal_rijen, diepte, max_h):
+        # Bouwt per rij van muur tot gangpad een stabiele rij op gelijke hoogte
         grid = [[0 for _ in range(diepte)] for _ in range(aantal_rijen)]
-        totaal_plekken = aantal_rijen * diepte
+        rest = stuks
 
-        # Bepaal hoeveel plekken we vullen: bij voorkeur alle plekken, maar nooit 1H als dat vermeden kan worden
-        min_stapel = 2 if max_h >= 2 else 1
-        max_plekken_zonder_1h = stuks // min_stapel
-
-        if max_plekken_zonder_1h >= totaal_plekken:
-            te_vullen_plekken = totaal_plekken
-        elif max_plekken_zonder_1h > 0:
-            # Vul zoveel mogelijk plekken op minstens 2H zodat rijen netjes gevuld blijven zonder 1H
-            te_vullen_plekken = max_plekken_zonder_1h
-        else:
-            te_vullen_plekken = 1
-
-        # Verdeel de pallets van achter (muur) naar voor (gangpad) met voorrang voor max_h achteraan
-        hoogtes = [min_stapel] * te_vullen_plekken if stuks >= min_stapel else [stuks]
-        rest = stuks - sum(hoogtes)
-
-        # Hoog stapels vanaf achteraan tegen de muur op tot max_h
-        for i in range(len(hoogtes)):
+        for r in range(aantal_rijen):
+            rijen_erna = aantal_rijen - 1 - r
             if rest <= 0:
                 break
-            bij = min(max_h - hoogtes[i], rest)
-            hoogtes[i] += bij
-            rest -= bij
 
-        # Plaats ze in het grid: eerst alle achterste plekken tegen de muur (d=0), dan rij voor rij naar voren
-        idx = 0
-        for d in range(diepte):
-            for r in range(aantal_rijen):
-                if idx < len(hoogtes):
-                    grid[r][d] = hoogtes[idx]
-                    idx += 1
+            # Kies de hoogst mogelijke uniforme hoogte voor deze hele rij,
+            # zodat de resterende rijen erna ook nog minstens 2H hoog kunnen zijn (als dat kan)
+            gekozen_h = 0
+            for h in range(max_h, 0, -1):
+                nodig_voor_deze_rij = h * diepte
+                over_voor_later = rest - nodig_voor_deze_rij
+                if rijen_erna == 0:
+                    if over_voor_later <= 0:
+                        gekozen_h = h
+                else:
+                    min_nodig_later = rijen_erna * diepte * 2
+                    if over_voor_later >= min_nodig_later:
+                        gekozen_h = h
+                        break
+
+            # Vul deze rij van muur tot gangpad op gekozen_h (of met het exacte restant op de laatste rij)
+            if rijen_erna > 0 and gekozen_h > 0:
+                for d in range(diepte):
+                    grid[r][d] = gekozen_h
+                rest -= gekozen_h * diepte
+            else:
+                # Laatste rij: verdeel de overgebleven pallets zo gelijk mogelijk (bijv. 3x 2H + 1x 1H)
+                basis = rest // diepte
+                extra = rest % diepte
+                for d in range(diepte):
+                    grid[r][d] = basis + (1 if d < extra else 0)
+                rest = 0
         return grid
 
     def teken_kant(kolom, titel, diepte, aantal_rijen, benutting):
-        totaal_plekken = aantal_rijen * diepte
-        grid = maak_grid_vanaf_muur(aantal_stuks, aantal_rijen, diepte, max_stapel)
+        grid = maak_stabiele_rijen(aantal_stuks, aantal_rijen, diepte, max_stapel)
 
-        alle_hoogtes = [grid[r][d] for r in range(aantal_rijen) for d in range(diepte) if grid[r][d] > 0]
-        tellingen = []
-        for h in range(max_stapel, 0, -1):
-            aantal_h = alle_hoogtes.count(h)
-            if aantal_h > 0:
-                tellingen.append(f"{aantal_h}x {h}H")
-        uitleg_tekst = " + ".join(tellingen)
+        # Samenvatting per rij (bijv. "Rij 1: 4H | Rij 2: 3H | Rij 3: 2H")
+        rij_samenvatting = []
+        for r in range(aantal_rijen):
+            hoogtes_in_rij = [h for h in grid[r] if h > 0]
+            if len(set(hoogtes_in_rij)) == 1:
+                rij_samenvatting.append(f"Rij {r+1}: {hoogtes_in_rij}H")
+            else:
+                rij_samenvatting.append(f"Rij {r+1}: {'/'.join(str(h)+'H' for h in hoogtes_in_rij)}")
+        uitleg_tekst = " | ".join(rij_samenvatting)
 
         with kolom:
             st.markdown(f"#### {titel}")
             k1, k2 = st.columns(2)
             k1.metric("Rijen naast elkaar", f"{aantal_rijen} rijen", uitleg_tekst)
-            k2.metric("Stapel-benutting", f"{benutting}%", f"{len(alle_hoogtes)} van {totaal_plekken} plekken")
+            k2.metric("Stapel-benutting", f"{benutting}%", f"{aantal_rijen * diepte} vloerplekken")
 
             breedte_fig = max(5.0, aantal_rijen * 1.15)
             hoogte_fig = diepte * 1.05 + 1.3
