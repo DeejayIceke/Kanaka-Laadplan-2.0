@@ -394,6 +394,7 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
         )
 
 
+
     st.info("Container is leeg. Gebruik de + en - knoppen om te beginnen.")
 
 st.divider()
