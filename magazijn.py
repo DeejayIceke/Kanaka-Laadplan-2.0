@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 def toon_magazijn_tab():
-    st.subheader("🏭 Magazijn Stapeling — Plattegrond (Muur bovenaan, Gangpad onderaan)")
+    st.subheader("🏭 Magazijn Stapeling — Plattegrond (4H achteraan tegen de muur)")
 
     mc1, mc2 = st.columns(2)
     with mc1:
@@ -13,33 +13,79 @@ def toon_magazijn_tab():
         max_stapel = st.number_input("Max. stapelhoogte (lagen):", min_value=1, max_value=8, value=4, step=1)
 
     totaal_vloerplaatsen = math.ceil(aantal_stuks / max_stapel)
-    volle_stapels = aantal_stuks // max_stapel
-    rest_hoogte = aantal_stuks % max_stapel
 
+    # Berekening Kant A (3 diep)
     rijen_a = math.ceil(totaal_vloerplaatsen / 3)
-    benutting_a = round((totaal_vloerplaatsen / (rijen_a * 3)) * 100)
+    plekken_a = rijen_a * 3
+    benutting_a = round((aantal_stuks / (plekken_a * max_stapel)) * 100)
 
+    # Berekening Kant B (4 diep)
     rijen_b = math.ceil(totaal_vloerplaatsen / 4)
-    benutting_b = round((totaal_vloerplaatsen / (rijen_b * 4)) * 100)
+    plekken_b = rijen_b * 4
+    benutting_b = round((aantal_stuks / (plekken_b * max_stapel)) * 100)
 
     if benutting_a > benutting_b:
-        st.success(f"💡 **Beste benutting: Kant A (3 diep)** — Je gebruikt **{rijen_a} rijen naast elkaar** ({totaal_vloerplaatsen} van de {rijen_a * 3} vloerplekken bezet = {benutting_a}%).")
+        st.success(f"💡 **Beste benutting: Kant A (3 diep)** — Je gebruikt **{rijen_a} rijen naast elkaar** ({benutting_a}% benut, tegenover {benutting_b}% aan Kant B).")
     elif benutting_b > benutting_a:
-        st.success(f"💡 **Beste benutting: Kant B (4 diep)** — Je gebruikt **{rijen_b} rijen naast elkaar** ({totaal_vloerplaatsen} van de {rijen_b * 4} vloerplekken bezet = {benutting_b}%).")
+        st.success(f"💡 **Beste benutting: Kant B (4 diep)** — Je gebruikt **{rijen_b} rijen naast elkaar** ({benutting_b}% benut, tegenover {benutting_a}% aan Kant A).")
     else:
-        st.success(f"💡 **Beste benutting: Kant B (4 diep)** — Beide {benutting_b}% benut, maar aan Kant B heb je maar **{rijen_b} rijen** naast elkaar nodig.")
+        st.success(f"💡 **Beste benutting: Kant B (4 diep)** — Beide kanten hebben **{benutting_b}%** benutting, maar aan Kant B heb je maar **{rijen_b} rijen** naast elkaar nodig.")
 
     col_a, col_b = st.columns(2)
-    stapel_lijst = [max_stapel] * volle_stapels + ([rest_hoogte] if rest_hoogte > 0 else [])
+
+    def maak_grid_vanaf_muur(stuks, aantal_rijen, diepte, max_h):
+        # Bouwt van achter naar voor (d=0 tegen muur -> d=diepte-1 aan gangpad)
+        # Begint achteraan tegen de muur met max_h en vult daarna de diepte-lagen naar voren toe op
+        grid = [[0 for _ in range(diepte)] for _ in range(aantal_rijen)]
+        rest = stuks
+        totaal_plekken = aantal_rijen * diepte
+
+        # Stap 1: Vul achteraan tegen de muur (d=0) zoveel mogelijk op max_h (als er genoeg pallets zijn om de rest ook te vullen)
+        for d in range(diepte):
+            plekken_na_deze_laag = (diepte - 1 - d) * aantal_rijen
+            for r in range(aantal_rijen):
+                plekken_over = plekken_na_deze_laag + (aantal_rijen - 1 - r)
+                if rest <= 0:
+                    break
+                # Zet max_h als er na deze plek nog genoeg overblijft om alle resterende plekken minstens 1 (of liefst 2) hoog te zetten
+                if rest - max_h >= plekken_over * 2 or (plekken_over == 0 and rest >= max_h):
+                    grid[r][d] = max_h
+                    rest -= max_h
+                elif rest - max_h >= plekken_over:
+                    grid[r][d] = max_h
+                    rest -= max_h
+                else:
+                    # Verdeel de rest gelijkmatig van achter naar voor over de overige plekken
+                    nog_te_vullen = plekken_over + 1
+                    basis = rest // nog_te_vullen
+                    extra = rest % nog_te_vullen
+                    # Vul de rest van de plekken vanaf de huidige positie
+                    teller = 0
+                    for d2 in range(d, diepte):
+                        start_r = r if d2 == d else 0
+                        for r2 in range(start_r, aantal_rijen):
+                            grid[r2][d2] = basis + (1 if teller < extra else 0)
+                            teller += 1
+                    return grid
+        return grid
 
     def teken_kant(kolom, titel, diepte, aantal_rijen, benutting):
-        uitleg_tekst = f"{volle_stapels}x {max_stapel}H" + (f" + 1x {rest_hoogte}H" if rest_hoogte > 0 else "")
+        totaal_plekken = aantal_rijen * diepte
+        grid = maak_grid_vanaf_muur(aantal_stuks, aantal_rijen, diepte, max_stapel)
+
+        alle_hoogtes = [grid[r][d] for r in range(aantal_rijen) for d in range(diepte)]
+        tellingen = []
+        for h in range(max_stapel, 0, -1):
+            aantal_h = alle_hoogtes.count(h)
+            if aantal_h > 0:
+                tellingen.append(f"{aantal_h}x {h}H")
+        uitleg_tekst = " + ".join(tellingen)
 
         with kolom:
             st.markdown(f"#### {titel}")
             k1, k2 = st.columns(2)
             k1.metric("Rijen naast elkaar", f"{aantal_rijen} rijen", uitleg_tekst)
-            k2.metric("Vloerbenutting", f"{benutting}%", f"{totaal_vloerplaatsen} van {aantal_rijen * diepte} plekken")
+            k2.metric("Stapel-benutting", f"{benutting}%", f"{totaal_plekken} vloerplekken gevuld")
 
             breedte_fig = max(5.0, aantal_rijen * 1.15)
             hoogte_fig = diepte * 1.05 + 1.3
@@ -48,27 +94,33 @@ def toon_magazijn_tab():
             ax.set_ylim(-0.6, diepte * 1.05 + 0.9)
             ax.axis('off')
 
+            # Muur bovenaan
             ax.plot([0.1, aantal_rijen * 1.15], [diepte * 1.05 + 0.5, diepte * 1.05 + 0.5], color="#334155", linewidth=4)
             ax.text((aantal_rijen * 1.15) / 2, diepte * 1.05 + 0.65, "🧱 MUUR (Achterkant)", ha="center", va="bottom", fontweight="bold", fontsize=10, color="#334155")
+
+            # Gangpad onderaan
             ax.text((aantal_rijen * 1.15) / 2, -0.45, "⬇️ GANGPAD (Voorkant) ⬇️", ha="center", va="top", fontweight="bold", fontsize=10, color="#64748b")
 
-            plek_idx = 0
             for r in range(aantal_rijen):
                 x = 0.15 + r * 1.15
                 ax.text(x + 0.45, diepte * 1.05 + 0.15, f"Rij {r + 1}", ha="center", va="bottom", fontweight="bold", fontsize=10)
 
                 for d in range(diepte):
                     y = (diepte - 1 - d) * 1.05 + 0.05
-                    if plek_idx < len(stapel_lijst):
-                        h_nu = stapel_lijst[plek_idx]
-                        plek_idx += 1
-                        kleur = "#1b5e20" if h_nu == max_stapel else "#2ecc71"
-                        tekst_kleur = "white" if h_nu == max_stapel else "black"
+                    h_nu = grid[r][d]
+
+                    if h_nu == max_stapel:
+                        kleur = "#1b5e20"
+                        tekst_kleur = "white"
+                        label = f"{h_nu}H"
+                    elif h_nu > 0:
+                        kleur = "#2ecc71"
+                        tekst_kleur = "black"
                         label = f"{h_nu}H"
                     else:
                         kleur = "#e2e8f0"
                         tekst_kleur = "#64748b"
-                        label = "Vrij"
+                        label = "Leeg"
 
                     ax.add_patch(patches.Rectangle((x, y), 0.9, 0.9, linewidth=1.5, edgecolor="black", facecolor=kleur))
                     ax.text(x + 0.45, y + 0.45, label, ha="center", va="center", fontweight="bold", fontsize=10, color=tekst_kleur)
