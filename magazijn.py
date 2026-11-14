@@ -1,59 +1,37 @@
-import math
-import matplotlib.patches as patches
-import matplotlib.pyplot as plt
 import streamlit as st
-
+import math
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 def toon_magazijn_tab():
-    st.markdown(
-        """
+    st.markdown("""
     <div class="modern-header">
         <div class="modern-title">MAGAZIJN STAPELING <span style="font-weight:400; font-size:1.3rem;">| Visueel op Pallets</span></div>
         <div class="modern-subtitle">Overzicht en stapelberekening per artikel (zo weinig mogelijk rijen en zo laag &amp; gelijk mogelijk gestapeld)</div>
     </div>
-""",
-        unsafe_allow_html=True,
-    )
+""", unsafe_allow_html=True)
 
     mc1, mc2 = st.columns(2)
     with mc1:
         st.write("### 1. Aantal pallets van dit artikel:")
-        aantal_stuks = st.number_input(
-            "Aantal pallets van dit artikel:",
-            min_value=1,
-            value=69,
-            step=1,
-            label_visibility="collapsed",
-        )
+        aantal_stuks = st.number_input("Aantal pallets van dit artikel:", min_value=1, value=69, step=1, label_visibility="collapsed")
     with mc2:
         st.write("### 2. Max. stapelhoogte (lagen):")
-        max_stapel = st.number_input(
-            "Max. stapelhoogte (lagen):",
-            min_value=1,
-            max_value=8,
-            value=4,
-            step=1,
-            label_visibility="collapsed",
-        )
+        max_stapel = st.number_input("Max. stapelhoogte (lagen):", min_value=1, max_value=8, value=4, step=1, label_visibility="collapsed")
 
     def vul_gangpad_lijn(pallets, plekken, max_toegestane_h):
         lijn = list(0 for _ in range(plekken))
         if pallets <= 0 or plekken <= 0:
             return lijn
 
-        # Verdeel alle overgebleven pallets netjes over de gangpadlijn (nooit hoger dan max_toegestane_h)
         min_nodige_plekken = math.ceil(pallets / max_toegestane_h)
-        max_bruikbare_plekken = (
-            min(plekken, math.ceil(pallets / 2)) if pallets >= 2 else 1
-        )
+        max_bruikbare_plekken = min(plekken, math.ceil(pallets / 2)) if pallets >= 2 else 1
         k = max(min_nodige_plekken, max_bruikbare_plekken)
         k = min(k, plekken)
 
         basis = pallets // k
         extra = pallets % k
-        temp = list(basis + 1 for _ in range(extra)) + list(
-            basis for _ in range(k - extra)
-        )
+        temp = list(basis + 1 for _ in range(extra)) + list(basis for _ in range(k - extra))
         for i, val in enumerate(temp):
             lijn[i] = val
         return lijn
@@ -70,29 +48,18 @@ def toon_magazijn_tab():
 
         for lijn_idx in range(max_achter_lijnen):
             lijnen_nog_te_gaan = diepte - lijn_idx
-            # Hoeveel pallets kunnen er maximaal nog in de lijnen ná deze lijn (incl. gangpadlijn)?
             max_daarna = (lijnen_nog_te_gaan - 1) * aantal_rijen * vorige_h
-
-            # Als we deze lijn nog moeten vullen, of als de gangpadlijn anders te druk/ongelijk wordt
             min_nodig_nu = max(0, over_pallets - max_daarna)
 
             if min_nodig_nu == 0 and over_pallets <= aantal_rijen * vorige_h:
-                # Alles wat over is past al op de gangpadlijn (of een volgende lijn); stop met extra achterlijnen vullen
                 break
 
-            # Kies de laagste gelijke hoogte h (tussen 2 en vorige_h) waarmee:
-            # 1) we minstens min_nodig_nu pallets plaatsen, én
-            # 2) alle overblijvende pallets daarna nog op diezelfde hoogte h passen (zodat er nooit iets hogers vóór iets lagers komt)
             gekozen_h = vorige_h
             for h_kand in range(2, vorige_h + 1):
                 if over_pallets >= aantal_rijen * h_kand:
                     rest_na = over_pallets - (aantal_rijen * h_kand)
-                    if (
-                        rest_na
-                        <= (lijnen_nog_te_gaan - 1) * aantal_rijen * h_kand
-                    ):
+                    if rest_na <= (lijnen_nog_te_gaan - 1) * aantal_rijen * h_kand:
                         gekozen_h = h_kand
-                        # Als dit de voorlaatste lijn is, kies h_kand (bijv. 3H) zodra de gangpadlijn dan ook op h_kand / h_kand-1 uitkomt
                         if lijnen_nog_te_gaan == 2:
                             if rest_na >= aantal_rijen * (h_kand - 1):
                                 break
@@ -115,22 +82,18 @@ def toon_magazijn_tab():
 
         alle_hoogtes = achter_lijst + tussen_lijst + gangpad_lijn
         gebruikte_plekken = sum(1 for h in alle_hoogtes if h > 0)
-        benutting = round((gebruikte_plekken / totaal_plekken) * 100)
+        
+        max_capaciteit_pallets = totaal_plekken * max_h
+        benutting = round((totaal_pallets / max_capaciteit_pallets) * 100)
 
-        return (
-            aantal_rijen,
-            benutting,
-            gebruikte_plekken,
-            totaal_plekken,
-            alle_hoogtes,
-        )
-    rijen_a, benutting_a, gebr_a, tot_a, hoogtes_a = bereken_verdeling(aantal_stuks, max_stapel, 3)
-    rijen_b, benutting_b, gebr_b, tot_b, hoogtes_b = bereken_verdeling(aantal_stuks, max_stapel, 4)
+        return aantal_rijen, benutting, gebruikte_plekken, totaal_plekken, max_capaciteit_pallets, alle_hoogtes
+    rijen_a, benutting_a, gebr_a, tot_a, cap_a, hoogtes_a = bereken_verdeling(aantal_stuks, max_stapel, 3)
+    rijen_b, benutting_b, gebr_b, tot_b, cap_b, hoogtes_b = bereken_verdeling(aantal_stuks, max_stapel, 4)
 
     if benutting_a > benutting_b:
-        st.success(f"💡 **Beste keuze (strakste vulling): Kant A (3 diep)** — Je benut de rijen voor **{benutting_a}%** (tegenover {benutting_b}% aan Kant B), met **{rijen_a} rijen** (~{rijen_a * 1.20:.1f} m breed).")
+        st.success(f"💡 **Beste keuze (strakste vulling): Kant A (3 diep)** — Je benut **{benutting_a}%** van de capaciteit (tegenover {benutting_b}% aan Kant B), met **{rijen_a} rijen** (~{rijen_a * 1.20:.1f} m breed).")
     elif benutting_b > benutting_a:
-        st.success(f"💡 **Beste keuze (strakste vulling): Kant B (4 diep)** — Je benut de rijen voor **{benutting_b}%** (tegenover {benutting_a}% aan Kant A), met **{rijen_b} rijen** (~{rijen_b * 1.20:.1f} m breed).")
+        st.success(f"💡 **Beste keuze (strakste vulling): Kant B (4 diep)** — Je benut **{benutting_b}%** van de capaciteit (tegenover {benutting_a}% aan Kant A), met **{rijen_b} rijen** (~{rijen_b * 1.20:.1f} m breed).")
     else:
         if rijen_b < rijen_a:
             st.success(f"💡 **Beste keuze (minste breedte): Kant B (4 diep)** — Beide kanten zijn **{benutting_b}%** gevuld, maar Kant B gebruikt maar **{rijen_b} rijen** (~{rijen_b * 1.20:.1f} m breed).")
@@ -166,7 +129,7 @@ def toon_magazijn_tab():
 
         ax.text(x + breedte / 2, lading_y_start + totale_lading_h / 2, f"{h_nu}H", ha="center", va="center", fontweight="bold", fontsize=10, color=tekst_kleur)
 
-    def teken_kant(kolom, titel, diepte, aantal_rijen, benutting, gebruikte_plekken, totaal_plekken, hoogtes):
+    def teken_kant(kolom, titel, diepte, aantal_rijen, benutting, gebruikte_plekken, totaal_plekken, max_cap, hoogtes):
         benodigde_meters = aantal_rijen * 1.20
         totaal_geplaatst = sum(hoogtes)
 
@@ -189,7 +152,7 @@ def toon_magazijn_tab():
             st.markdown(f"#### {titel}")
             k1, k2 = st.columns(2)
             k1.metric("Breedte (rijen naast elkaar)", f"{aantal_rijen} rijen (~{benodigde_meters:.1f} m)", uitleg_tekst)
-            k2.metric("Vloerbenutting", f"{benutting}%", f"{gebruikte_plekken} van {totaal_plekken} plekken ({totaal_geplaatst} pallets)")
+            k2.metric("Ruimtebenutting", f"{benutting}%", f"{totaal_geplaatst} van {max_cap} pallets ({gebruikte_plekken}/{totaal_plekken} plekken)")
 
             stap_x = 1.12
             stap_y = 1.04
@@ -215,5 +178,5 @@ def toon_magazijn_tab():
 
             st.pyplot(fig, bbox_inches="tight")
 
-    teken_kant(col_a, "◀️ Kant A (3 diep)", 3, rijen_a, benutting_a, gebr_a, tot_a, hoogtes_a)
-    teken_kant(col_b, "▶️ Kant B (4 diep)", 4, rijen_b, benutting_b, gebr_b, tot_b, hoogtes_b)
+    teken_kant(col_a, "◀️ Kant A (3 diep)", 3, rijen_a, benutting_a, gebr_a, tot_a, cap_a, hoogtes_a)
+    teken_kant(col_b, "▶️ Kant B (4 diep)", 4, rijen_b, benutting_b, gebr_b, tot_b, cap_b, hoogtes_b)
