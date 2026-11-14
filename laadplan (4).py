@@ -219,7 +219,16 @@ ax.add_patch(container_border)
 x_onder, x_boven, ibc_paar_teller, idx = 0, 0, 0, 0
 while idx < len(laad_lijst):
     item = laad_lijst[idx]
-    tekst_grootte = 6.5 if item["L"] <= 1200 and "CP7" in item["naam"] else 10
+
+    if item["L"] <= 1200 and "CP7" in item["naam"]:
+        tekst_grootte = 9
+        if "600" in item["naam"]:
+            tekst_weergave = item["naam"].replace(" 600", "") + "\n600"
+        else:
+            tekst_weergave = item["naam"].replace(" 750", "") + "\n750"
+    else:
+        tekst_grootte = 10
+        tekst_weergave = item["naam"]
 
     if item["force_midden"]:
         start_x = max(x_onder, x_boven)
@@ -227,7 +236,7 @@ while idx < len(laad_lijst):
         y_pos = (max_breedte - item["B"]) / 2
         rect = patches.Rectangle((start_x, y_pos), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85)
         ax.add_patch(rect)
-        ax.text(start_x + (item["L"]/2), y_pos + (item["B"]/2), item["naam"], color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
+        ax.text(start_x + (item["L"]/2), y_pos + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         x_onder, x_boven = start_x + item["L"], start_x + item["L"]
         idx += 1
         continue
@@ -261,13 +270,13 @@ while idx < len(laad_lijst):
         vulling_kleur = "#ff0000" if (x_onder + item["L"] > max_lengte) else item["kleur"]
         rect = patches.Rectangle((x_onder, 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85)
         ax.add_patch(rect)
-        ax.text(x_onder + (item["L"]/2), 20 + (item["B"]/2), item["naam"], color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
+        ax.text(x_onder + (item["L"]/2), 20 + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         x_onder += item["L"]
     else:
         vulling_kleur = "#ff0000" if (x_boven + item["L"] > max_lengte) else item["kleur"]
         rect = patches.Rectangle((x_boven, max_breedte - item["B"] - 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85)
         ax.add_patch(rect)
-        ax.text(x_boven + (item["L"]/2), max_breedte - item["B"] - 20 + (item["B"]/2), item["naam"], color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
+        ax.text(x_boven + (item["L"]/2), max_breedte - item["B"] - 20 + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         x_boven += item["L"]
     idx += 1
 
