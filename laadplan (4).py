@@ -291,14 +291,28 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     st.write(f"**Geladen:** {totale_meters} mm van {max_lengte} mm.")
     st.write("💡 **Legenda:** Blauw=CP3 | Groen=CP7 600kg | Rood=CP7 750kg | Geel=IBC | Grijs=Maatwerk | FELROOD=Past Niet")
 
-    buf = io.BytesIO()
+        buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=200, bbox_inches="tight")
-    st.download_button(
-        label="📸 Download Laadplan (Afbeelding)",
-        data=buf.getvalue(),
-        file_name="fons_laadplan.png",
-        mime="image/png"
-    )
+    afbeelding_bytes = buf.getvalue()
+
+    @st.dialog("📸 Laadplan Afbeelding", width="large")
+    def toon_afbeelding_popup():
+        st.image(afbeelding_bytes, use_container_width=True)
+        st.info("📱 **iPhone tip:** Houd de afbeelding even ingedrukt om op te slaan in Foto's of te delen. Tik rechtsboven op **✖** om terug te gaan.")
+
+    btn_col1, btn_col2 = st.columns(2)
+    with btn_col1:
+        if st.button("📸 Bekijk Afbeelding (iPhone)", use_container_width=True):
+            toon_afbeelding_popup()
+    with btn_col2:
+        st.download_button(
+            label="💾 Download PNG om te printen (PC)",
+            data=afbeelding_bytes,
+            file_name="fons_laadplan.png",
+            mime="image/png",
+            use_container_width=True
+        )
+
 else:
     st.info("Container is leeg. Gebruik de + en - knoppen om te beginnen.")
 
