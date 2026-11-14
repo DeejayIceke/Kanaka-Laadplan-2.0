@@ -48,9 +48,11 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
+st.write("### 1. Kies container:")
 container_type = st.selectbox(
     "1. Kies container:", 
-    ["45ft Container (13550 x 2426 mm)", "40ft Container (12030 x 2350 mm)", "20ft Container (5898 x 2350 mm)"]
+    ["45ft Container (13550 x 2426 mm)", "40ft Container (12030 x 2350 mm)", "20ft Container (5898 x 2350 mm)"],
+    label_visibility="collapsed"
 )
 
 max_lengte = 13550 if "45ft" in container_type else 12030 if "40ft" in container_type else 5898
