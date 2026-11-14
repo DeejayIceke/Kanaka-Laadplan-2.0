@@ -13,11 +13,11 @@ def toon_magazijn_tab():
 
     mc1, mc2 = st.columns(2)
     with mc1:
-        st.write("### 1. Aantal pallets van dit artikel:")
-        aantal_stuks = st.number_input("Aantal pallets van dit artikel:", min_value=1, value=48, step=1, label_visibility="collapsed")
+        st.write("### 1. Aantal pallets:")
+        aantal_stuks = st.number_input("Aantal pallets:", min_value=1, value=48, step=1, label_visibility="collapsed")
     with mc2:
-        st.write("### 2. Max. stapelhoogte (lagen):")
-        max_stapel = st.number_input("Max. stapelhoogte (lagen):", min_value=1, max_value=8, value=3, step=1, label_visibility="collapsed")
+        st.write("### 2. Max. stapelhoogte:")
+        max_stapel = st.number_input("Max. stapelhoogte:", min_value=1, max_value=8, value=3, step=1, label_visibility="collapsed")
 
     volle = aantal_stuks // max_stapel
     rest = aantal_stuks % max_stapel
