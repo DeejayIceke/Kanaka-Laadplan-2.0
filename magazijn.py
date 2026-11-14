@@ -14,17 +14,18 @@ def toon_magazijn_tab():
     mc1, mc2 = st.columns(2)
     with mc1:
         st.write("### 1. Aantal pallets van dit artikel:")
-        aantal_stuks = st.number_input("Aantal pallets van dit artikel:", min_value=1, value=68, step=1, label_visibility="collapsed")
+        aantal_stuks = st.number_input("Aantal pallets van dit artikel:", min_value=1, value=69, step=1, label_visibility="collapsed")
     with mc2:
         st.write("### 2. Max. stapelhoogte (lagen):")
         max_stapel = st.number_input("Max. stapelhoogte (lagen):", min_value=1, max_value=8, value=4, step=1, label_visibility="collapsed")
 
     def vul_gangpad_lijn(pallets, plekken, max_toegestane_h):
-        lijn = [0] * plekken
+        lijn = * plekken
         if pallets <= 0 or plekken <= 0:
             return lijn
 
-        max_bruikbare_plekken = min(plekken, pallets // 2) if pallets >= 2 else 1
+        # Gebruik zoveel mogelijk plekken op de gangpadlijn (bijv. 9 pallets op 5 plekken -> 2H, 2H, 2H, 2H, 1H)
+        max_bruikbare_plekken = min(plekken, math.ceil(pallets / 2)) if pallets >= 2 else 1
         min_nodige_plekken = math.ceil(pallets / max_toegestane_h)
         k = max(min_nodige_plekken, max_bruikbare_plekken)
         k = min(k, plekken)
@@ -76,7 +77,7 @@ def toon_magazijn_tab():
         lege_tussenlijnen = (diepte - 1) - aantal_achterste_lijnen
 
         gangpad_lijn = vul_gangpad_lijn(rest_pallets, aantal_rijen, hoogte_voorlaatste_lijn)
-        alle_hoogtes = achterste_lijnen + ([0] * (lege_tussenlijnen * aantal_rijen)) + gangpad_lijn
+        alle_hoogtes = achterste_lijnen + ( * (lege_tussenlijnen * aantal_rijen)) + gangpad_lijn
 
         gebruikte_plekken = sum(1 for h in alle_hoogtes if h > 0)
         benutting = round((gebruikte_plekken / totaal_plekken) * 100)
@@ -152,10 +153,10 @@ def toon_magazijn_tab():
             stap_x = 1.12
             stap_y = 1.04
             breedte_fig = max(5.2, aantal_rijen * stap_x + 0.2)
-            hoogte_fig = diepte * stap_y + 1.35
+            hoogte_fig = diepte * stap_y + 1.45
             fig, ax = plt.subplots(figsize=(breedte_fig, hoogte_fig))
             ax.set_xlim(0, aantal_rijen * stap_x + 0.15)
-            ax.set_ylim(-0.45, diepte * stap_y + 0.65)
+            ax.set_ylim(-0.55, diepte * stap_y + 0.65)
             ax.axis('off')
 
             ax.plot([0.1, aantal_rijen * stap_x], [diepte * stap_y + 0.35, diepte * stap_y + 0.35], color="#334155", linewidth=4)
