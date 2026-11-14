@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 def toon_magazijn_tab():
-    st.subheader("🏭 Magazijn Stapeling — Per rij dezelfde hoogte voor steun")
+    st.subheader("🏭 Magazijn Stapeling — Lagen langs de muur (4H achteraan)")
 
     mc1, mc2 = st.columns(2)
     with mc1:
@@ -33,57 +33,55 @@ def toon_magazijn_tab():
 
     col_a, col_b = st.columns(2)
 
-    def maak_stabiele_rijen(stuks, aantal_rijen, diepte, max_h):
-        # Bouwt per rij van muur tot gangpad een stabiele rij op gelijke hoogte
+    def maak_lagen_langs_muur(stuks, aantal_rijen, diepte, max_h):
+        # d = 0 is de achterste lijn tegen de muur, d = diepte - 1 is de voorste lijn aan het gangpad
+        # Elke horizontale lijn d (over alle rijen r) krijgt dezelfde hoogte, aflopend van muur naar gangpad
         grid = [[0 for _ in range(diepte)] for _ in range(aantal_rijen)]
         rest = stuks
 
-        for r in range(aantal_rijen):
-            rijen_erna = aantal_rijen - 1 - r
+        for d in range(diepte):
+            lijnen_erna = diepte - 1 - d
             if rest <= 0:
                 break
 
-            # Kies de hoogst mogelijke uniforme hoogte voor deze hele rij,
-            # zodat de resterende rijen erna ook nog minstens 2H hoog kunnen zijn (als dat kan)
             gekozen_h = 0
             for h in range(max_h, 0, -1):
-                nodig_voor_deze_rij = h * diepte
-                over_voor_later = rest - nodig_voor_deze_rij
-                if rijen_erna == 0:
+                nodig_voor_deze_lijn = h * aantal_rijen
+                over_voor_later = rest - nodig_voor_deze_lijn
+                if lijnen_erna == 0:
                     if over_voor_later <= 0:
                         gekozen_h = h
                 else:
-                    min_nodig_later = rijen_erna * diepte * 2
+                    min_nodig_later = lijnen_erna * aantal_rijen * 2
                     if over_voor_later >= min_nodig_later:
                         gekozen_h = h
                         break
 
-            # Vul deze rij van muur tot gangpad op gekozen_h (of met het exacte restant op de laatste rij)
-            if rijen_erna > 0 and gekozen_h > 0:
-                for d in range(diepte):
+            if lijnen_erna > 0 and gekozen_h > 0:
+                for r in range(aantal_rijen):
                     grid[r][d] = gekozen_h
-                rest -= gekozen_h * diepte
+                rest -= gekozen_h * aantal_rijen
             else:
-                # Laatste rij: verdeel de overgebleven pallets zo gelijk mogelijk (bijv. 3x 2H + 1x 1H)
-                basis = rest // diepte
-                extra = rest % diepte
-                for d in range(diepte):
-                    grid[r][d] = basis + (1 if d < extra else 0)
+                # Voorste lijn aan het gangpad: verdeel de overgebleven pallets zo gelijk mogelijk (bijv. 2H, 2H, 1H)
+                basis = rest // aantal_rijen
+                extra = rest % aantal_rijen
+                for r in range(aantal_rijen):
+                    grid[r][d] = basis + (1 if r < extra else 0)
                 rest = 0
         return grid
 
     def teken_kant(kolom, titel, diepte, aantal_rijen, benutting):
-        grid = maak_stabiele_rijen(aantal_stuks, aantal_rijen, diepte, max_stapel)
+        grid = maak_lagen_langs_muur(aantal_stuks, aantal_rijen, diepte, max_stapel)
 
-        # Samenvatting per rij (bijv. "Rij 1: 4H | Rij 2: 3H | Rij 3: 2H")
-        rij_samenvatting = []
-        for r in range(aantal_rijen):
-            hoogtes_in_rij = [h for h in grid[r] if h > 0]
-            if len(set(hoogtes_in_rij)) == 1:
-                rij_samenvatting.append(f"Rij {r+1}: {hoogtes_in_rij}H")
+        # Samenvatting van achter (muur) naar voor (gangpad)
+        lijn_samenvatting = []
+        for d in range(diepte):
+            hoogtes_in_lijn = [grid[r][d] for r in range(aantal_rijen) if grid[r][d] > 0]
+            if len(set(hoogtes_in_lijn)) == 1:
+                lijn_samenvatting.append(f"Laag {d+1}: {hoogtes_in_lijn[0]}H")
             else:
-                rij_samenvatting.append(f"Rij {r+1}: {'/'.join(str(h)+'H' for h in hoogtes_in_rij)}")
-        uitleg_tekst = " | ".join(rij_samenvatting)
+                lijn_samenvatting.append(f"Laag {d+1}: {'/'.join(str(h)+'H' for h in hoogtes_in_lijn)}")
+        uitleg_tekst = " | ".join(lijn_samenvatting)
 
         with kolom:
             st.markdown(f"#### {titel}")
@@ -129,6 +127,10 @@ def toon_magazijn_tab():
                     ax.add_patch(patches.Rectangle((x, y), 0.9, 0.9, linewidth=1.5, edgecolor="black", facecolor=kleur))
                     ax.text(x + 0.45, y + 0.45, label, ha="center", va="center", fontweight="bold", fontsize=10, color=tekst_kleur)
             st.pyplot(fig)
+
+    teken_kant(col_a, "◀️ Kant A (3 diep)", 3, rijen_a, benutting_a)
+    teken_kant(col_b, "▶️ Kant B (4 diep)", 4, rijen_b, benutting_b)
+
 
     teken_kant(col_a, "◀️ Kant A (3 diep)", 3, rijen_a, benutting_a)
     teken_kant(col_b, "▶️ Kant B (4 diep)", 4, rijen_b, benutting_b)
