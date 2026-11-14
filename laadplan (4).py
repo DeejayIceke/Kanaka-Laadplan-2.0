@@ -292,6 +292,84 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     st.write("💡 **Legenda:** Blauw=CP3 | Groen=CP7 600kg | Rood=CP7 750kg | Geel=IBC | Grijs=Maatwerk | FELROOD=Past Niet")
 
         buf = io.BytesIO()
+fig, ax = plt.subplots(figsize=(15, 3.5))
+ax.set_xlim(0, max_lengte); ax.set_ylim(0, max_breedte); ax.set_aspect('equal', adjustable='box')
+container_border = patches.Rectangle((0, 0), max_lengte, max_breedte, linewidth=2, edgecolor='black', facecolor='none')
+ax.add_patch(container_border)
+
+x_onder, x_boven, ibc_paar_teller, idx = 0, 0, 0, 0
+while idx < len(laad_lijst):
+    item = laad_lijst[idx]
+    tekst_grootte = 10
+
+    if item["L"] <= 1200 and "CP7" in item["naam"]:
+        if "600" in item["naam"]:
+            tekst_weergave = item["naam"].replace(" 600", "") + "\n600"
+        else:
+            tekst_weergave = item["naam"].replace(" 750", "") + "\n750"
+    else:
+        tekst_weergave = item["naam"]
+
+    if item["force_midden"]:
+        start_x = max(x_onder, x_boven)
+        vulling_kleur = "#ff0000" if (start_x + item["L"] > max_lengte) else item["kleur"]
+        y_pos = (max_breedte - item["B"]) / 2
+        rect = patches.Rectangle((start_x, y_pos), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85)
+        ax.add_patch(rect)
+        ax.text(start_x + (item["L"]/2), y_pos + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
+        x_onder, x_boven = start_x + item["L"], start_x + item["L"]
+        idx += 1
+        continue
+    if max_breedte == 2350 and item["naam_puur"] == "IBC":
+        heeft_partner = (idx + 1 < len(laad_lijst) and laad_lijst[idx+1]["naam_puur"] == "IBC" and not laad_lijst[idx+1]["force_midden"])
+        if heeft_partner:
+            if ibc_paar_teller % 2 == 0:
+                x_pos_onder = max(x_onder, x_boven) if ibc_paar_teller == 0 else x_onder
+                vulling_kleur1 = "#ff0000" if (x_pos_onder + 1000 > max_lengte) else item["kleur"]
+                rect1 = patches.Rectangle((x_pos_onder, 20), 1000, 1200, linewidth=1, edgecolor='white', facecolor=vulling_kleur1, alpha=0.85)
+                ax.add_patch(rect1)
+                ax.text(x_pos_onder + 500, 20 + 600, "IBC (Breed)", color="black", weight="bold", ha="center", va="center", fontsize=11)
+                x_pos_boven = max(x_onder, x_boven) if ibc_paar_teller == 0 else x_boven
+                vulling_kleur2 = "#ff0000" if (x_pos_boven + 1200 > max_lengte) else item["kleur"]
+                rect2 = patches.Rectangle((x_pos_boven, max_breedte - 1000 - 20), 1200, 1000, linewidth=1, edgecolor='white', facecolor=vulling_kleur2, alpha=0.85)
+                ax.add_patch(rect2)
+                ax.text(x_pos_boven + 600, max_breedte - 1000 - 20 + 500, "IBC (Lang)", color="black", weight="bold", ha="center", va="center", fontsize=11)
+                x_onder, x_boven = x_pos_onder + 1000, x_pos_boven + 1200
+            else:
+                vulling_kleur1 = "#ff0000" if (x_onder + 1200 > max_lengte) else item["kleur"]
+                rect1 = patches.Rectangle((x_onder, 20), 1200, 1000, linewidth=1, edgecolor='white', facecolor=vulling_kleur1, alpha=0.85)
+                ax.add_patch(rect1)
+                ax.text(x_onder + 600, 20 + 500, "IBC (Lang)", color="black", weight="bold", ha="center", va="center", fontsize=11)
+                vulling_kleur2 = "#ff0000" if (x_boven + 1000 > max_lengte) else item["kleur"]
+                rect2 = patches.Rectangle((x_boven, max_breedte - 1200 - 20), 1000, 1200, linewidth=1, edgecolor='white', facecolor=vulling_kleur2, alpha=0.85)
+                ax.add_patch(rect2)
+                ax.text(x_boven + 500, max_breedte - 1200 - 20 + 600, "IBC (Breed)", color="black", weight="bold", ha="center", va="center", fontsize=11)
+                x_onder, x_boven = x_onder + 1200, x_boven + 1000
+            ibc_paar_teller += 1; idx += 2; continue
+    if x_onder <= x_boven:
+        vulling_kleur = "#ff0000" if (x_onder + item["L"] > max_lengte) else item["kleur"]
+        rect = patches.Rectangle((x_onder, 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85)
+        ax.add_patch(rect)
+        ax.text(x_onder + (item["L"]/2), 20 + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
+        x_onder += item["L"]
+    else:
+        vulling_kleur = "#ff0000" if (x_boven + item["L"] > max_lengte) else item["kleur"]
+        rect = patches.Rectangle((x_boven, max_breedte - item["B"] - 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85)
+        ax.add_patch(rect)
+        ax.text(x_boven + (item["L"]/2), max_breedte - item["B"] - 20 + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
+        x_boven += item["L"]
+    idx += 1
+
+totale_meters = max(x_onder, x_boven); restruimte = max_lengte - totale_meters
+st.write("### 3. Plan:")
+if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0 or as_v_cp3 + as_v_cp7_600 + as_v_cp7_750 + as_v_ibc + as_v_mw + as_a_cp3 + as_a_cp7_600 + as_a_cp7_750 + as_a_ibc + as_a_mw > 0:
+    if restruimte >= 0: st.success(f"✅ Past! Nog {restruimte} mm over.")
+    else: st.error(f"❌ Past NIET! {abs(restruimte)} mm tekort.")
+    st.pyplot(fig, use_container_width=True)
+    st.write(f"**Geladen:** {totale_meters} mm van {max_lengte} mm.")
+    st.write("💡 **Legenda:** Blauw=CP3 | Groen=CP7 600kg | Rood=CP7 750kg | Geel=IBC | Grijs=Maatwerk | FELROOD=Past Niet")
+
+    buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=200, bbox_inches="tight")
     afbeelding_bytes = buf.getvalue()
 
@@ -312,12 +390,10 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
             mime="image/png",
             use_container_width=True
         )
-
 else:
     st.info("Container is leeg. Gebruik de + en - knoppen om te beginnen.")
 
 st.divider()
-import importlib
 import magazijn
 importlib.reload(magazijn)
 magazijn.toon_magazijn_tab()
