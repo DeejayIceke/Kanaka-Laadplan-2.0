@@ -16,11 +16,9 @@ def toon_magazijn_tab():
     volle_stapels = aantal_stuks // max_stapel
     rest_hoogte = aantal_stuks % max_stapel
 
-    # Berekening Kant A (3 diep)
     rijen_a = math.ceil(totaal_vloerplaatsen / 3)
     benutting_a = round((totaal_vloerplaatsen / (rijen_a * 3)) * 100)
 
-    # Berekening Kant B (4 diep)
     rijen_b = math.ceil(totaal_vloerplaatsen / 4)
     benutting_b = round((totaal_vloerplaatsen / (rijen_b * 4)) * 100)
 
@@ -50,11 +48,8 @@ def toon_magazijn_tab():
             ax.set_ylim(-0.6, diepte * 1.05 + 0.9)
             ax.axis('off')
 
-            # Muur bovenaan
             ax.plot([0.1, aantal_rijen * 1.15], [diepte * 1.05 + 0.5, diepte * 1.05 + 0.5], color="#334155", linewidth=4)
             ax.text((aantal_rijen * 1.15) / 2, diepte * 1.05 + 0.65, "🧱 MUUR (Achterkant)", ha="center", va="bottom", fontweight="bold", fontsize=10, color="#334155")
-
-            # Gangpad onderaan
             ax.text((aantal_rijen * 1.15) / 2, -0.45, "⬇️ GANGPAD (Voorkant) ⬇️", ha="center", va="top", fontweight="bold", fontsize=10, color="#64748b")
 
             plek_idx = 0
