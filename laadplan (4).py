@@ -369,6 +369,8 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     st.write(f"**Geladen:** {totale_meters} mm van {max_lengte} mm.")
     st.write("💡 **Legenda:** Blauw=CP3 | Groen=CP7 600kg | Rood=CP7 750kg | Geel=IBC | Grijs=Maatwerk | FELROOD=Past Niet")
 
+       st.write("💡 **Legenda:** Blauw=CP3 | Groen=CP7 600kg | Rood=CP7 750kg | Geel=IBC | Grijs=Maatwerk | FELROOD=Past Niet")
+
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=200, bbox_inches="tight")
     afbeelding_bytes = buf.getvalue()
@@ -391,6 +393,7 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
             use_container_width=True
         )
 else:
+
     st.info("Container is leeg. Gebruik de + en - knoppen om te beginnen.")
 
 st.divider()
