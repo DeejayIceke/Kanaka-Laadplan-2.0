@@ -42,6 +42,17 @@ st.markdown("""
             font-weight: 500;
             letter-spacing: 0.3px;
         }
+        @media (orientation: landscape) and (max-width: 950px) {
+            .block-container {
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+                padding-top: 1rem !important;
+                max-width: 100% !important;
+            }
+            header, [data-testid="stToolbar"] {
+                display: none !important;
+            }
+        }
     </style>
     <div class="modern-header">
         <div class="modern-title">FONS LAADPLAN <span style="font-weight:400; font-size:1.3rem;">| 2.0</span></div>
