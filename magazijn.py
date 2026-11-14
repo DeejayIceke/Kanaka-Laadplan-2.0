@@ -7,7 +7,7 @@ def toon_magazijn_tab():
     st.markdown("""
     <div class="modern-header">
         <div class="modern-title">MAGAZIJN STAPELING <span style="font-weight:400; font-size:1.3rem;">| Visueel op Pallets</span></div>
-        <div class="modern-subtitle">Overzicht en stapelberekening per artikel</div>
+        <div class="modern-subtitle">Overzicht en stapelberekening per artikel (paren van gelijke hoogte)</div>
     </div>
 """, unsafe_allow_html=True)
 
@@ -19,12 +19,26 @@ def toon_magazijn_tab():
         st.write("### 2. Max. stapelhoogte (lagen):")
         max_stapel = st.number_input("Max. stapelhoogte (lagen):", min_value=1, max_value=8, value=4, step=1, label_visibility="collapsed")
 
-    totaal_vloerplaatsen = math.ceil(aantal_stuks / max_stapel)
-    basis_laag = aantal_stuks // totaal_vloerplaatsen
-    aantal_hoge_stapels = aantal_stuks % totaal_vloerplaatsen
-    aantal_lage_stapels = totaal_vloerplaatsen - aantal_hoge_stapels
+    # Bouw paren van exact gelijke hoogte zodat 2 stapels naast elkaar altijd even hoog zijn
+    paren_van_2 = aantal_stuks // (2 * max_stapel)
+    rest = aantal_stuks % (2 * max_stapel)
 
-    basis_hoogtes = [basis_laag + 1] * aantal_hoge_stapels + [basis_laag] * aantal_lage_stapels
+    basis_hoogtes = [max_stapel] * (paren_van_2 * 2)
+
+    if rest > 0:
+        if rest <= max_stapel:
+            # Past op 1 vloerplek (of splits in 2 gelijke lagere stapels als rest even is)
+            if rest >= 4 and rest % 2 == 0:
+                basis_hoogtes.extend([rest // 2, rest // 2])
+            else:
+                basis_hoogtes.append(rest)
+        else:
+            # Verdeel rest over 2 stapels naast elkaar met zoveel mogelijk gelijke hoogte
+            helft_laag = rest // 2
+            helft_hoog = rest - helft_laag
+            basis_hoogtes.extend([helft_hoog, helft_laag])
+
+    totaal_vloerplaatsen = len(basis_hoogtes)
 
     rijen_a = math.ceil(totaal_vloerplaatsen / 3)
     benutting_a = round((totaal_vloerplaatsen / (rijen_a * 3)) * 100)
@@ -72,17 +86,22 @@ def toon_magazijn_tab():
 
     def teken_kant(kolom, titel, diepte, aantal_rijen, benutting):
         totaal_plekken = aantal_rijen * diepte
-        lege_plekken = [0] * (totaal_plekken - len(basis_hoogtes))
+        lege_plekken = * (totaal_plekken - len(basis_hoogtes))
         hoogtes = basis_hoogtes + lege_plekken
 
         benodigde_meters = aantal_rijen * 1.20
 
+        # Vul per paar rijen naast elkaar (Rij 1 & 2, Rij 3 & 4, ...) zodat 2 pallets naast elkaar altijd dezelfde hoogte hebben
         grid = [[0 for _ in range(diepte)] for _ in range(aantal_rijen)]
         idx = 0
-        for d in range(diepte):
-            for r in range(aantal_rijen):
-                grid[r][d] = hoogtes[idx]
-                idx += 1
+        for r_paar in range(0, aantal_rijen, 2):
+            for d in range(diepte):
+                if idx < len(hoogtes):
+                    grid[r_paar][d] = hoogtes[idx]
+                    idx += 1
+                if r_paar + 1 < aantal_rijen and idx < len(hoogtes):
+                    grid[r_paar + 1][d] = hoogtes[idx]
+                    idx += 1
 
         tellingen = []
         for h in range(max_stapel, 0, -1):
