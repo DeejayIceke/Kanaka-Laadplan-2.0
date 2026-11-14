@@ -7,7 +7,7 @@ st.set_page_config(page_title="Fons Laadplan", layout="wide")
 
 st.markdown("""
     <style>
-        .block-container { padding-top: 1.5rem !important; }
+        .block-container { padding-top: 3.5rem !important; }
         div[data-testid="stColumn"] { display: flex; flex-direction: column; }
         .custom-box {
             padding: 0.45rem; border-radius: 0.5rem; color: white; font-weight: bold; 
