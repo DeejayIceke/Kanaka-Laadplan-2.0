@@ -58,7 +58,7 @@ with col2:
     pallets_cp7_600_totaal = st.number_input("Aantal CP7 600", min_value=0, value=0, step=1, key=f"cp7_600_{st.session_state.reset_id}", label_visibility="collapsed")
 
 with col3:
-    st.markdown('<div class="custom-box" style="background-color:#ff8a80;">CP7 750kg (1400x1200)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="custom-box" style="background-color:#ff8a80; color:black;">CP7 750kg (1400x1200)</div>', unsafe_allow_html=True)
     pallets_cp7_750_totaal = st.number_input("Aantal CP7 750", min_value=0, value=0, step=1, key=f"cp7_750_{st.session_state.reset_id}", label_visibility="collapsed")
 
 with col4:
@@ -147,24 +147,7 @@ def voeg_partij_toe_aslast(art_naam, aantal, richting):
             if art_naam == "CP7_600":
                 info["kleur"] = "#9b59b6"
             elif art_naam == "CP7_750":
-                info["kleur"] = "#e84393"
-
-        vloer = int(math.ceil(aantal / 2)) if info["stapelbaar"] else int(aantal)
-        overgebleven = aantal
-        for _ in range(vloer):
-            h_label = " (2H)" if info["stapelbaar"] and overgebleven >= 2 else (" (1H)" if info["stapelbaar"] else "")
-            overgebleven -= 2
-            laad_lijst.append({"naam": f"{info['label']}{h_label}", "naam_puur": art_naam, "L": info["lengte"], "B": info["breedte"], "kleur": info["kleur"], "force_midden": True})
-
-def voeg_partij_toe_aslast(art_naam, aantal, richting):
-    if aantal > 0:
-        info = product_info[art_naam].copy()
-        if "Smal" in richting:
-            info["lengte"], info["breedte"] = info["breedte"], info["lengte"]
-            if art_naam == "CP7_600":
-                info["kleur"] = "#9b59b6"
-            elif art_naam == "CP7_750":
-                info["kleur"] = "#e84393"
+                info["kleur"] = "#f8a5c2"
 
         vloer = int(math.ceil(aantal / 2)) if info["stapelbaar"] else int(aantal)
         overgebleven = aantal
@@ -231,7 +214,7 @@ while idx < len(laad_lijst):
         y_pos = (max_breedte - item["B"]) / 2
         rect = patches.Rectangle((start_x, y_pos), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85)
         ax.add_patch(rect)
-        ax.text(start_x + (item["L"]/2), y_pos + (item["B"]/2), item["naam"], color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=10)
+        ax.text(start_x + (item["L"]/2), y_pos + (item["B"]/2), item["naam"], color="black", weight="bold", ha="center", va="center", fontsize=9, linespacing=1.6)
         x_onder, x_boven = start_x + item["L"], start_x + item["L"]
         idx += 1
         continue
@@ -265,13 +248,13 @@ while idx < len(laad_lijst):
         vulling_kleur = "#ff0000" if (x_onder + item["L"] > max_lengte) else item["kleur"]
         rect = patches.Rectangle((x_onder, 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85)
         ax.add_patch(rect)
-        ax.text(x_onder + (item["L"]/2), 20 + (item["B"]/2), item["naam"], color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=10)
+        ax.text(x_onder + (item["L"]/2), 20 + (item["B"]/2), item["naam"], color="black", weight="bold", ha="center", va="center", fontsize=9, linespacing=1.6)
         x_onder += item["L"]
     else:
         vulling_kleur = "#ff0000" if (x_boven + item["L"] > max_lengte) else item["kleur"]
         rect = patches.Rectangle((x_boven, max_breedte - item["B"] - 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85)
         ax.add_patch(rect)
-        ax.text(x_boven + (item["L"]/2), max_breedte - item["B"] - 20 + (item["B"]/2), item["naam"], color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=10)
+        ax.text(x_boven + (item["L"]/2), max_breedte - item["B"] - 20 + (item["B"]/2), item["naam"], color="black", weight="bold", ha="center", va="center", fontsize=9, linespacing=1.6)
         x_boven += item["L"]
     idx += 1
 
@@ -282,7 +265,7 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     else: st.error(f"❌ Past NIET! {abs(restruimte)} mm tekort.")
     st.pyplot(fig)
     st.write(f"**Geladen:** {totale_meters} mm van {max_lengte} mm.")
-    st.write("💡 **Legenda:** Blauw=CP3 | Groen=CP7 600kg | Rood=CP7 750kg | Geel=IBC | Grijs=Maatwerk | FELROOD=Past Niet")
+    st.write("💡 **Legenda:** Blauw=CP3 | Groen=CP7 600kg | Lichtrood=CP7 750kg | Geel=IBC | Grijs=Maatwerk | FELROOD=Past Niet")
 else:
     st.info("Container is leeg. Gebruik de + en - knoppen om te beginnen.")
 
