@@ -20,12 +20,10 @@ def toon_magazijn_tab():
         max_stapel = st.number_input("Max. stapelhoogte (lagen):", min_value=1, max_value=8, value=4, step=1, label_visibility="collapsed")
 
     def vul_gangpad_lijn(pallets, plekken, max_toegestane_h):
-        lijn = * plekken
+        lijn = [0] * plekken
         if pallets <= 0 or plekken <= 0:
             return lijn
 
-        # Gebruik zoveel mogelijk plekken op de gangpadlijn zodat er geen lege plekken overblijven als dat niet hoeft,
-        # maar houd elke stapel minimaal 2H (tenzij er maar 1 pallet is) en nooit hoger dan max_toegestane_h
         max_bruikbare_plekken = min(plekken, pallets // 2) if pallets >= 2 else 1
         min_nodige_plekken = math.ceil(pallets / max_toegestane_h)
         k = max(min_nodige_plekken, max_bruikbare_plekken)
@@ -40,7 +38,6 @@ def toon_magazijn_tab():
                     lijn[i] = val
                 return lijn
 
-        # Fallback: vul van links naar rechts tot max_toegestane_h
         over = pallets
         for i in range(plekken):
             zet = min(max_toegestane_h, over)
@@ -65,8 +62,6 @@ def toon_magazijn_tab():
 
         hoogte_voorlaatste_lijn = max_h
 
-        # Controleer of we de laatste volle lijn tegen de muur beter 1 niveau lager (bijv. 3H i.p.v. 4H) zetten
-        # zodat de gangpadlijn ook goed gevuld is (en nooit hoger wordt dan de lijn erachter)
         if volle_lagen_max >= 1 and max_h >= 3 and rest_pallets > 0:
             nieuwe_rest = rest_pallets + aantal_rijen
             nieuwe_max_gangpad = max_h - 1
@@ -81,7 +76,7 @@ def toon_magazijn_tab():
         lege_tussenlijnen = (diepte - 1) - aantal_achterste_lijnen
 
         gangpad_lijn = vul_gangpad_lijn(rest_pallets, aantal_rijen, hoogte_voorlaatste_lijn)
-        alle_hoogtes = achterste_lijnen + (* (lege_tussenlijnen * aantal_rijen)) + gangpad_lijn
+        alle_hoogtes = achterste_lijnen + ([0] * (lege_tussenlijnen * aantal_rijen)) + gangpad_lijn
 
         gebruikte_plekken = sum(1 for h in alle_hoogtes if h > 0)
         benutting = round((gebruikte_plekken / totaal_plekken) * 100)
