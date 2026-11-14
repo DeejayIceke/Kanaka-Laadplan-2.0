@@ -13,9 +13,11 @@ def toon_magazijn_tab():
 
     mc1, mc2 = st.columns(2)
     with mc1:
-        aantal_stuks = st.number_input("Aantal pallets van dit artikel:", min_value=1, value=48, step=1)
+        st.write("### 1. Aantal pallets van dit artikel:")
+        aantal_stuks = st.number_input("Aantal pallets van dit artikel:", min_value=1, value=48, step=1, label_visibility="collapsed")
     with mc2:
-        max_stapel = st.number_input("Max. stapelhoogte (lagen):", min_value=1, max_value=8, value=3, step=1)
+        st.write("### 2. Max. stapelhoogte (lagen):")
+        max_stapel = st.number_input("Max. stapelhoogte (lagen):", min_value=1, max_value=8, value=3, step=1, label_visibility="collapsed")
 
     volle = aantal_stuks // max_stapel
     rest = aantal_stuks % max_stapel
@@ -47,7 +49,6 @@ def toon_magazijn_tab():
             st.success(f"💡 **Beste keuze: Kant B (4 diep)** — Beide kanten gebruiken **{rijen_b} rijen breed**, maar Kant B benut de rijen strakker ({benutting_b}% tegenover {benutting_a}%).")
 
     col_a, col_b = st.columns(2)
-
     def teken_pallet_stapel(ax, x, y, breedte, hoogte, h_nu, max_h):
         if h_nu == 0:
             ax.add_patch(patches.Rectangle((x, y), breedte, hoogte, linewidth=1.2, linestyle="--", edgecolor="#94a3b8", facecolor="#f8fafc"))
@@ -131,4 +132,3 @@ def toon_magazijn_tab():
 
     teken_kant(col_a, "◀️ Kant A (3 diep)", 3, rijen_a, benutting_a)
     teken_kant(col_b, "▶️ Kant B (4 diep)", 4, rijen_b, benutting_b)
-
