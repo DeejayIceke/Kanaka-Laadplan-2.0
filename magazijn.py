@@ -20,11 +20,10 @@ def toon_magazijn_tab():
         max_stapel = st.number_input("Max. stapelhoogte (lagen):", min_value=1, max_value=8, value=4, step=1, label_visibility="collapsed")
 
     def vul_gangpad_lijn(pallets, plekken, max_toegestane_h):
-        lijn = * plekken
+        lijn = list(0 for _ in range(plekken))
         if pallets <= 0 or plekken <= 0:
             return lijn
 
-        # Gebruik zoveel mogelijk plekken op de gangpadlijn (bijv. 9 pallets op 5 plekken -> 2H, 2H, 2H, 2H, 1H)
         max_bruikbare_plekken = min(plekken, math.ceil(pallets / 2)) if pallets >= 2 else 1
         min_nodige_plekken = math.ceil(pallets / max_toegestane_h)
         k = max(min_nodige_plekken, max_bruikbare_plekken)
@@ -34,7 +33,7 @@ def toon_magazijn_tab():
             basis = pallets // k
             extra = pallets % k
             if basis + (1 if extra > 0 else 0) <= max_toegestane_h:
-                temp = [basis + 1] * extra + [basis] * (k - extra)
+                temp = list(basis + 1 for _ in range(extra)) + list(basis for _ in range(k - extra))
                 for i, val in enumerate(temp):
                     lijn[i] = val
                 return lijn
@@ -59,7 +58,7 @@ def toon_magazijn_tab():
 
         achterste_lijnen = []
         for _ in range(volle_lagen_max):
-            achterste_lijnen.extend([max_h] * aantal_rijen)
+            achterste_lijnen.extend(list(max_h for _ in range(aantal_rijen)))
 
         hoogte_voorlaatste_lijn = max_h
 
@@ -69,7 +68,7 @@ def toon_magazijn_tab():
             if nieuwe_rest <= aantal_rijen * nieuwe_max_gangpad:
                 huidige_plekken_nodig = math.ceil(rest_pallets / max_h)
                 if huidige_plekken_nodig <= aantal_rijen // 2:
-                    achterste_lijnen = ([max_h] * ((volle_lagen_max - 1) * aantal_rijen)) + ([nieuwe_max_gangpad] * aantal_rijen)
+                    achterste_lijnen = list(max_h for _ in range((volle_lagen_max - 1) * aantal_rijen)) + list(nieuwe_max_gangpad for _ in range(aantal_rijen))
                     rest_pallets = nieuwe_rest
                     hoogte_voorlaatste_lijn = nieuwe_max_gangpad
 
@@ -77,7 +76,7 @@ def toon_magazijn_tab():
         lege_tussenlijnen = (diepte - 1) - aantal_achterste_lijnen
 
         gangpad_lijn = vul_gangpad_lijn(rest_pallets, aantal_rijen, hoogte_voorlaatste_lijn)
-        alle_hoogtes = achterste_lijnen + ( * (lege_tussenlijnen * aantal_rijen)) + gangpad_lijn
+        alle_hoogtes = achterste_lijnen + list(0 for _ in range(lege_tussenlijnen * aantal_rijen)) + gangpad_lijn
 
         gebruikte_plekken = sum(1 for h in alle_hoogtes if h > 0)
         benutting = round((gebruikte_plekken / totaal_plekken) * 100)
@@ -112,7 +111,7 @@ def toon_magazijn_tab():
         ax.add_patch(patches.Rectangle((x, y + klos_h), breedte, bovenplank_h, linewidth=1, edgecolor="#5c3a21", facecolor="#c89d7c"))
 
         klos_b = breedte * 0.18
-        for klos_x in [x, x + breedte / 2 - klos_b / 2, x + breedte - klos_b]:
+        for klos_x in (x, x + breedte / 2 - klos_b / 2, x + breedte - klos_b):
             ax.add_patch(patches.Rectangle((klos_x, y), klos_b, klos_h, linewidth=1, edgecolor="#5c3a21", facecolor="#8d5b3c"))
 
         lading_y_start = y + p_hoogte
@@ -129,7 +128,7 @@ def toon_magazijn_tab():
     def teken_kant(kolom, titel, diepte, aantal_rijen, benutting, gebruikte_plekken, totaal_plekken, hoogtes):
         benodigde_meters = aantal_rijen * 1.20
 
-        grid = [[0 for _ in range(diepte)] for _ in range(aantal_rijen)]
+        grid = list(list(0 for _ in range(diepte)) for _ in range(aantal_rijen))
         idx = 0
         for d in range(diepte):
             for r in range(aantal_rijen):
@@ -159,7 +158,7 @@ def toon_magazijn_tab():
             ax.set_ylim(-0.55, diepte * stap_y + 0.65)
             ax.axis('off')
 
-            ax.plot([0.1, aantal_rijen * stap_x], [diepte * stap_y + 0.35, diepte * stap_y + 0.35], color="#334155", linewidth=4)
+            ax.plot((0.1, aantal_rijen * stap_x), (diepte * stap_y + 0.35, diepte * stap_y + 0.35), color="#334155", linewidth=4)
             ax.text((aantal_rijen * stap_x) / 2, diepte * stap_y + 0.45, "🧱 MUUR (Achterkant)", ha="center", va="bottom", fontweight="bold", fontsize=10, color="#334155")
 
             ax.text((aantal_rijen * stap_x) / 2, -0.25, f"⬇️ GANGPAD — Breedte nodig: ~{benodigde_meters:.1f} meter ⬇️", ha="center", va="top", fontweight="bold", fontsize=10, color="#64748b")
