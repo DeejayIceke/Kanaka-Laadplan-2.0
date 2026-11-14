@@ -19,6 +19,7 @@ st.markdown("""
             border-left: 6px solid #38bdf8;
             padding: 1.2rem 1.5rem;
             border-radius: 0.75rem;
+            margin-top: 0.5rem;
             margin-bottom: 1.5rem;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
         }
@@ -38,6 +39,13 @@ st.markdown("""
             margin: 0.25rem 0 0 0;
             font-weight: 500;
             letter-spacing: 0.3px;
+        }
+        @media print {
+            @page { size: landscape; margin: 1cm; }
+            .block-container { padding-top: 0.5rem !important; }
+            header, [data-testid="stToolbar"], button, [data-testid="stNumberInput"], [data-testid="stExpander"], iframe {
+                display: none !important;
+            }
         }
     </style>
     <div class="modern-header">
@@ -219,15 +227,14 @@ ax.add_patch(container_border)
 x_onder, x_boven, ibc_paar_teller, idx = 0, 0, 0, 0
 while idx < len(laad_lijst):
     item = laad_lijst[idx]
+    tekst_grootte = 10
 
     if item["L"] <= 1200 and "CP7" in item["naam"]:
-        tekst_grootte = 10
         if "600" in item["naam"]:
             tekst_weergave = item["naam"].replace(" 600", "") + "\n600"
         else:
             tekst_weergave = item["naam"].replace(" 750", "") + "\n750"
     else:
-        tekst_grootte = 10
         tekst_weergave = item["naam"]
 
     if item["force_midden"]:
@@ -285,12 +292,29 @@ st.write("### 3. Plan:")
 if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0 or as_v_cp3 + as_v_cp7_600 + as_v_cp7_750 + as_v_ibc + as_v_mw + as_a_cp3 + as_a_cp7_600 + as_a_cp7_750 + as_a_ibc + as_a_mw > 0:
     if restruimte >= 0: st.success(f"✅ Past! Nog {restruimte} mm over.")
     else: st.error(f"❌ Past NIET! {abs(restruimte)} mm tekort.")
-    st.pyplot(fig)
+    st.pyplot(fig, use_container_width=True)
     st.write(f"**Geladen:** {totale_meters} mm van {max_lengte} mm.")
     st.write("💡 **Legenda:** Blauw=CP3 | Groen=CP7 600kg | Rood=CP7 750kg | Geel=IBC | Grijs=Maatwerk | FELROOD=Past Niet")
+    
+    st.components.v1.html("""
+        <button onclick="window.parent.print()" style="
+            background-color: #0f172a;
+            color: white;
+            border: 2px solid #38bdf8;
+            padding: 10px 22px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            margin-top: 6px;
+        ">
+            🖨️ Print Laadplan
+        </button>
+    """, height=60)
 else:
     st.info("Container is leeg. Gebruik de + en - knoppen om te beginnen.")
 
 st.divider()
 from magazijn import toon_magazijn_tab
 toon_magazijn_tab()
+
