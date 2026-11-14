@@ -33,7 +33,7 @@ if "reset_id" not in st.session_state: st.session_state.reset_id = 0
 product_info = {
     "CP3": {"lengte": 1150, "breedte": 1150, "kleur": "#3498db", "stapelbaar": False, "label": "CP3"},
     "CP7_600": {"lengte": 1400, "breedte": 1100, "kleur": "#2ecc71", "stapelbaar": True, "label": "CP7 600"},
-    "CP7_750": {"lengte": 1400, "breedte": 1200, "kleur": "#c0392b", "stapelbaar": True, "label": "CP7 750"},
+    "CP7_750": {"lengte": 1400, "breedte": 1200, "kleur": "#ff8a80", "stapelbaar": True, "label": "CP7 750"},
     "IBC": {"lengte": 1000, "breedte": 1200, "kleur": "#f1c40f", "stapelbaar": False, "label": "IBC"},
     "Maatwerk": {"lengte": 1000, "breedte": 1000, "kleur": "#7f8c8d", "stapelbaar": False, "label": "Maatwerk"}
 }
