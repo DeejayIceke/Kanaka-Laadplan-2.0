@@ -6,18 +6,18 @@ import matplotlib.patches as patches
 def toon_magazijn_tab():
     st.markdown("""
     <div class="modern-header">
-        <div class="modern-title">STAPELING <span style="font-weight:400; font-size:1.3rem;">| Visueel</span></div>
-        <div class="modern-subtitle">Overzicht en stapelberekening</div>
+        <div class="modern-title">MAGAZIJN STAPELING <span style="font-weight:400; font-size:1.3rem;">| Visueel op Pallets</span></div>
+        <div class="modern-subtitle">Overzicht en stapelberekening per artikel</div>
     </div>
 """, unsafe_allow_html=True)
 
     mc1, mc2 = st.columns(2)
     with mc1:
-        st.write("### 1. Aantal pallets:")
-        aantal_stuks = st.number_input("Aantal pallets:", min_value=1, value=48, step=1, label_visibility="collapsed")
+        st.write("### 1. Aantal pallets van dit artikel:")
+        aantal_stuks = st.number_input("Aantal pallets van dit artikel:", min_value=1, value=48, step=1, label_visibility="collapsed")
     with mc2:
-        st.write("### 2. Max. stapelhoogte:")
-        max_stapel = st.number_input("Max. stapelhoogte:", min_value=1, max_value=8, value=3, step=1, label_visibility="collapsed")
+        st.write("### 2. Max. stapelhoogte (lagen):")
+        max_stapel = st.number_input("Max. stapelhoogte (lagen):", min_value=1, max_value=8, value=3, step=1, label_visibility="collapsed")
 
     volle = aantal_stuks // max_stapel
     rest = aantal_stuks % max_stapel
@@ -39,14 +39,14 @@ def toon_magazijn_tab():
     benutting_b = round((totaal_vloerplaatsen / (rijen_b * 4)) * 100)
 
     if rijen_b < rijen_a:
-        st.success(f"💡 **Beste keuze (minste breedte): Kant B (4 diep)** — Je gebruikt maar **{rijen_b} rijen naast elkaar** (tegenover {rijen_a} rijen aan Kant A).")
+        st.success(f"💡 **Beste keuze (minste breedte): Kant B (4 diep)** — Je gebruikt maar **{rijen_b} rijen naast elkaar** (~{rijen_b * 1.20:.1f} m breed, tegenover {rijen_a} rijen aan Kant A).")
     elif rijen_a < rijen_b:
-        st.success(f"💡 **Beste keuze (minste breedte): Kant A (3 diep)** — Je gebruikt maar **{rijen_a} rijen naast elkaar** (tegenover {rijen_b} rijen aan Kant B).")
+        st.success(f"💡 **Beste keuze (minste breedte): Kant A (3 diep)** — Je gebruikt maar **{rijen_a} rijen naast elkaar** (~{rijen_a * 1.20:.1f} m breed, tegenover {rijen_b} rijen aan Kant B).")
     else:
         if benutting_a >= benutting_b:
-            st.success(f"💡 **Beste keuze: Kant A (3 diep)** — Beide kanten gebruiken **{rijen_a} rijen breed**, maar Kant A benut de rijen strakker ({benutting_a}% tegenover {benutting_b}%).")
+            st.success(f"💡 **Beste keuze: Kant A (3 diep)** — Beide kanten gebruiken **{rijen_a} rijen breed** (~{rijen_a * 1.20:.1f} m), maar Kant A benut de rijen strakker ({benutting_a}% tegenover {benutting_b}%).")
         else:
-            st.success(f"💡 **Beste keuze: Kant B (4 diep)** — Beide kanten gebruiken **{rijen_b} rijen breed**, maar Kant B benut de rijen strakker ({benutting_b}% tegenover {benutting_a}%).")
+            st.success(f"💡 **Beste keuze: Kant B (4 diep)** — Beide kanten gebruiken **{rijen_b} rijen breed** (~{rijen_b * 1.20:.1f} m), maar Kant B benut de rijen strakker ({benutting_b}% tegenover {benutting_a}%).")
 
     col_a, col_b = st.columns(2)
     def teken_pallet_stapel(ax, x, y, breedte, hoogte, h_nu, max_h):
@@ -84,6 +84,9 @@ def toon_magazijn_tab():
         lege_plekken = [0] * (totaal_plekken - len(basis_hoogtes))
         hoogtes = basis_hoogtes + lege_plekken
 
+        # Strak tegen elkaar geplaatst: ca. 1,20 m per rij
+        benodigde_meters = aantal_rijen * 1.20
+
         grid = [[0 for _ in range(diepte)] for _ in range(aantal_rijen)]
         idx = 0
         for d in range(diepte):
@@ -101,7 +104,7 @@ def toon_magazijn_tab():
         with kolom:
             st.markdown(f"#### {titel}")
             k1, k2 = st.columns(2)
-            k1.metric("Breedte (rijen naast elkaar)", f"{aantal_rijen} rijen", uitleg_tekst)
+            k1.metric("Breedte (rijen naast elkaar)", f"{aantal_rijen} rijen (~{benodigde_meters:.1f} m)", uitleg_tekst)
             k2.metric("Vloerbenutting", f"{benutting}%", f"{totaal_vloerplaatsen} van {totaal_plekken} plekken")
 
             stap_x = 1.12
@@ -117,8 +120,8 @@ def toon_magazijn_tab():
             ax.plot([0.1, aantal_rijen * stap_x], [diepte * stap_y + 0.35, diepte * stap_y + 0.35], color="#334155", linewidth=4)
             ax.text((aantal_rijen * stap_x) / 2, diepte * stap_y + 0.45, "🧱 MUUR (Achterkant)", ha="center", va="bottom", fontweight="bold", fontsize=10, color="#334155")
 
-            # Gangpad onderaan
-            ax.text((aantal_rijen * stap_x) / 2, -0.25, "⬇️ GANGPAD (Voorkant) ⬇️", ha="center", va="top", fontweight="bold", fontsize=10, color="#64748b")
+            # Gangpad + benodigde breedte onderaan
+            ax.text((aantal_rijen * stap_x) / 2, -0.25, f"⬇️ GANGPAD — Breedte nodig: ~{benodigde_meters:.1f} meter ⬇️", ha="center", va="top", fontweight="bold", fontsize=10, color="#64748b")
 
             for r in range(aantal_rijen):
                 x = 0.12 + r * stap_x
