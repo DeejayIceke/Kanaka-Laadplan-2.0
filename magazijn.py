@@ -4,15 +4,14 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 def toon_magazijn_tab():
-    st.subheader("🏭 Magazijn Stapeling — Maximaal 4H van achter tegen de muur")
+    st.subheader("🏭 Magazijn Stapeling — Maximaal hoog van achter tegen de muur")
 
     mc1, mc2 = st.columns(2)
     with mc1:
-        aantal_stuks = st.number_input("Aantal pallets van dit artikel:", min_value=1, value=35, step=1)
+        aantal_stuks = st.number_input("Aantal pallets van dit artikel:", min_value=1, value=48, step=1)
     with mc2:
-        max_stapel = st.number_input("Max. stapelhoogte (lagen):", min_value=1, max_value=8, value=4, step=1)
+        max_stapel = st.number_input("Max. stapelhoogte (lagen):", min_value=1, max_value=8, value=3, step=1)
 
-    # Bereken het maximale aantal volle stapels (zonder onnodige 1H)
     volle = aantal_stuks // max_stapel
     rest = aantal_stuks % max_stapel
     basis_hoogtes = [max_stapel] * volle
@@ -26,16 +25,12 @@ def toon_magazijn_tab():
 
     totaal_vloerplaatsen = len(basis_hoogtes)
 
-    # Berekening Kant A (3 diep)
     rijen_a = math.ceil(totaal_vloerplaatsen / 3)
     benutting_a = round((totaal_vloerplaatsen / (rijen_a * 3)) * 100)
 
-    # Berekening Kant B (4 diep)
     rijen_b = math.ceil(totaal_vloerplaatsen / 4)
     benutting_b = round((totaal_vloerplaatsen / (rijen_b * 4)) * 100)
 
-    # Prioriteit 1: Zo weinig mogelijk breedte (rijen naast elkaar)
-    # Prioriteit 2: Bij gelijke breedte, de strakste vloerbenutting
     if rijen_b < rijen_a:
         st.success(f"💡 **Beste keuze (minste breedte): Kant B (4 diep)** — Je gebruikt maar **{rijen_b} rijen naast elkaar** (tegenover {rijen_a} rijen aan Kant A).")
     elif rijen_a < rijen_b:
@@ -50,9 +45,9 @@ def toon_magazijn_tab():
 
     def teken_kant(kolom, titel, diepte, aantal_rijen, benutting):
         totaal_plekken = aantal_rijen * diepte
-        hoogtes = basis_hoogtes + [0] * (totaal_plekken - len(basis_hoogtes))
+        lege_plekken = [0] * (totaal_plekken - len(basis_hoogtes))
+        hoogtes = basis_hoogtes + lege_plekken
 
-        # Vul laag per laag van achter tegen de muur (d=0) naar voren richting het gangpad
         grid = [[0 for _ in range(diepte)] for _ in range(aantal_rijen)]
         idx = 0
         for d in range(diepte):
@@ -80,11 +75,8 @@ def toon_magazijn_tab():
             ax.set_ylim(-0.6, diepte * 1.05 + 0.9)
             ax.axis('off')
 
-            # Muur bovenaan
             ax.plot([0.1, aantal_rijen * 1.15], [diepte * 1.05 + 0.5, diepte * 1.05 + 0.5], color="#334155", linewidth=4)
             ax.text((aantal_rijen * 1.15) / 2, diepte * 1.05 + 0.65, "🧱 MUUR (Achterkant)", ha="center", va="bottom", fontweight="bold", fontsize=10, color="#334155")
-
-            # Gangpad onderaan
             ax.text((aantal_rijen * 1.15) / 2, -0.45, "⬇️ GANGPAD (Voorkant) ⬇️", ha="center", va="top", fontweight="bold", fontsize=10, color="#64748b")
 
             for r in range(aantal_rijen):
