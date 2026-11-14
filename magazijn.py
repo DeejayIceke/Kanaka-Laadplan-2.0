@@ -6,18 +6,18 @@ import matplotlib.patches as patches
 def toon_magazijn_tab():
     st.markdown("""
     <div class="modern-header">
-        <div class="modern-title">STAPELING <span style="font-weight:400; font-size:1.3rem;">| Visueel</span></div>
-        <div class="modern-subtitle">Overzicht en stapelberekening</div>
+        <div class="modern-title">MAGAZIJN STAPELING <span style="font-weight:400; font-size:1.3rem;">| Vooraanzicht</span></div>
+        <div class="modern-subtitle">Overzicht vanuit het gangpad &amp; benodigde breedte</div>
     </div>
 """, unsafe_allow_html=True)
 
     mc1, mc2 = st.columns(2)
     with mc1:
-        st.write("### 1. Aantal pallets:")
-        aantal_stuks = st.number_input("Aantal pallets:", min_value=1, value=48, step=1, label_visibility="collapsed")
+        st.write("### 1. Aantal pallets van dit artikel:")
+        aantal_stuks = st.number_input("Aantal pallets van dit artikel:", min_value=1, value=48, step=1, label_visibility="collapsed")
     with mc2:
-        st.write("### 2. Max. stapelhoogte:")
-        max_stapel = st.number_input("Max. stapelhoogte:", min_value=1, max_value=8, value=3, step=1, label_visibility="collapsed")
+        st.write("### 2. Max. stapelhoogte (lagen):")
+        max_stapel = st.number_input("Max. stapelhoogte (lagen):", min_value=1, max_value=8, value=2, step=1, label_visibility="collapsed")
 
     volle = aantal_stuks // max_stapel
     rest = aantal_stuks % max_stapel
@@ -49,44 +49,30 @@ def toon_magazijn_tab():
             st.success(f"💡 **Beste keuze: Kant B (4 diep)** — Beide kanten gebruiken **{rijen_b} rijen breed** (~{rijen_b * 1.20:.1f} m), maar Kant B benut de rijen strakker ({benutting_b}% tegenover {benutting_a}%).")
 
     col_a, col_b = st.columns(2)
-    def teken_pallet_stapel(ax, x, y, breedte, hoogte, h_nu, max_h):
-        if h_nu == 0:
-            ax.add_patch(patches.Rectangle((x, y), breedte, hoogte, linewidth=1.2, linestyle="--", edgecolor="#94a3b8", facecolor="#f8fafc"))
-            ax.text(x + breedte / 2, y + hoogte / 2, "Vrij", ha="center", va="center", fontweight="bold", fontsize=9, color="#94a3b8")
-            return
-
-        # 1. Houten pallet onderaan (exacte volledige breedte)
-        p_hoogte = hoogte * 0.20
+    def teken_enkele_pallet_laag(ax, x, y, breedte, hoogte, kleur_lading):
+        p_hoogte = hoogte * 0.24
         bovenplank_h = p_hoogte * 0.36
         klos_h = p_hoogte * 0.64
 
+        # Houten pallet onderaan de laag
         ax.add_patch(patches.Rectangle((x, y + klos_h), breedte, bovenplank_h, linewidth=1, edgecolor="#5c3a21", facecolor="#c89d7c"))
-
         klos_b = breedte * 0.18
         for klos_x in [x, x + breedte / 2 - klos_b / 2, x + breedte - klos_b]:
             ax.add_patch(patches.Rectangle((klos_x, y), klos_b, klos_h, linewidth=1, edgecolor="#5c3a21", facecolor="#8d5b3c"))
 
-        # 2. Volledig doorlopend groen blok (exact even breed als de pallet, zonder witte lijnen)
-        lading_y_start = y + p_hoogte
-        beschikbare_hoogte = hoogte - p_hoogte
-        totale_lading_h = beschikbare_hoogte * (h_nu / max_h)
-
-        kleur_lading = "#1b5e20" if h_nu == max_h else "#2ecc71"
-        tekst_kleur = "white" if h_nu == max_h else "black"
-
-        ax.add_patch(patches.Rectangle((x, lading_y_start), breedte, totale_lading_h, linewidth=1, edgecolor="#144517", facecolor=kleur_lading))
-
-        # 3. Label in het midden van het groene blok
-        ax.text(x + breedte / 2, lading_y_start + totale_lading_h / 2, f"{h_nu}H", ha="center", va="center", fontweight="bold", fontsize=10, color=tekst_kleur)
+        # Lading op deze pallet
+        lading_y = y + p_hoogte
+        lading_h = hoogte - p_hoogte
+        ax.add_patch(patches.Rectangle((x, lading_y), breedte, lading_h, linewidth=1, edgecolor="#144517", facecolor=kleur_lading))
 
     def teken_kant(kolom, titel, diepte, aantal_rijen, benutting):
         totaal_plekken = aantal_rijen * diepte
         lege_plekken = [0] * (totaal_plekken - len(basis_hoogtes))
         hoogtes = basis_hoogtes + lege_plekken
 
-        # Strak tegen elkaar geplaatst: ca. 1,20 m per rij
         benodigde_meters = aantal_rijen * 1.20
 
+        # Grid opbouwen: [rij][diepte]
         grid = [[0 for _ in range(diepte)] for _ in range(aantal_rijen)]
         idx = 0
         for d in range(diepte):
@@ -107,31 +93,40 @@ def toon_magazijn_tab():
             k1.metric("Breedte (rijen naast elkaar)", f"{aantal_rijen} rijen (~{benodigde_meters:.1f} m)", uitleg_tekst)
             k2.metric("Vloerbenutting", f"{benutting}%", f"{totaal_vloerplaatsen} van {totaal_plekken} plekken")
 
-            stap_x = 1.12
-            stap_y = 1.04
-            breedte_fig = max(5.2, aantal_rijen * stap_x + 0.2)
-            hoogte_fig = diepte * stap_y + 0.95
+            stap_x = 1.10
+            laag_h = 0.85
+            breedte_fig = max(5.2, aantal_rijen * stap_x + 0.3)
+            hoogte_fig = max(2.8, max_stapel * laag_h + 1.2)
             fig, ax = plt.subplots(figsize=(breedte_fig, hoogte_fig))
-            ax.set_xlim(0, aantal_rijen * stap_x + 0.15)
-            ax.set_ylim(-0.35, diepte * stap_y + 0.65)
+            ax.set_xlim(0, aantal_rijen * stap_x + 0.2)
+            ax.set_ylim(-0.45, max_stapel * laag_h + 0.75)
             ax.axis('off')
 
-            # Muur bovenaan
-            ax.plot([0.1, aantal_rijen * stap_x], [diepte * stap_y + 0.35, diepte * stap_y + 0.35], color="#334155", linewidth=4)
-            ax.text((aantal_rijen * stap_x) / 2, diepte * stap_y + 0.45, "🧱 MUUR (Achterkant)", ha="center", va="bottom", fontweight="bold", fontsize=10, color="#334155")
-
-            # Gangpad + benodigde breedte onderaan
-            ax.text((aantal_rijen * stap_x) / 2, -0.25, f"⬇️ GANGPAD — Breedte nodig: ~{benodigde_meters:.1f} meter ⬇️", ha="center", va="top", fontweight="bold", fontsize=10, color="#64748b")
+            # Vloerlijn onderaan
+            ax.plot([0.08, aantal_rijen * stap_x + 0.08], [0, 0], color="#334155", linewidth=3)
+            ax.text((aantal_rijen * stap_x + 0.16) / 2, -0.22, f"⬅️ Vooraanzicht vanuit gangpad — Breedte nodig: ~{benodigde_meters:.1f} m ({diepte} diep) ➡️", ha="center", va="top", fontweight="bold", fontsize=9.5, color="#475569")
 
             for r in range(aantal_rijen):
                 x = 0.12 + r * stap_x
-                ax.text(x + 0.46, diepte * stap_y + 0.08, f"Rij {r + 1}", ha="center", va="bottom", fontweight="bold", fontsize=10)
+                # Aantal gevulde stapels achter elkaar in deze rij
+                gevuld_in_rij = sum(1 for h in grid[r] if h > 0)
+                hoogte_vooraan = max(grid[r]) if gevuld_in_rij > 0 else 0
 
-                for d in range(diepte):
-                    y = (diepte - 1 - d) * stap_y + 0.02
-                    teken_pallet_stapel(ax, x, y, 0.92, 0.94, grid[r][d], max_stapel)
+                # Titel boven de rij (Rijnummer + hoeveel diep gevuld)
+                ax.text(x + 0.46, max_stapel * laag_h + 0.15, f"Rij {r + 1}\n({gevuld_in_rij}/{diepte} diep)", ha="center", va="bottom", fontweight="bold", fontsize=8.5, color="#1e293b")
 
-            st.pyplot(fig)
+                if hoogte_vooraan == 0:
+                    ax.add_patch(patches.Rectangle((x, 0.02), 0.92, laag_h - 0.04, linewidth=1.2, linestyle="--", edgecolor="#94a3b8", facecolor="#f8fafc"))
+                    ax.text(x + 0.46, laag_h / 2, "Vrij", ha="center", va="center", fontweight="bold", fontsize=9, color="#94a3b8")
+                else:
+                    kleur = "#1b5e20" if hoogte_vooraan == max_stapel else "#2ecc71"
+                    tekst_kleur = "white" if hoogte_vooraan == max_stapel else "black"
+                    for laag in range(hoogte_vooraan):
+                        y = laag * laag_h + 0.02
+                        teken_enkele_pallet_laag(ax, x, y, 0.92, laag_h - 0.03, kleur)
+                        ax.text(x + 0.46, y + (laag_h * 0.62), f"Laag {laag + 1}", ha="center", va="center", fontweight="bold", fontsize=8, color=tekst_kleur)
+
+            st.pyplot(fig, bbox_inches="tight")
 
     teken_kant(col_a, "◀️ Kant A (3 diep)", 3, rijen_a, benutting_a)
     teken_kant(col_b, "▶️ Kant B (4 diep)", 4, rijen_b, benutting_b)
