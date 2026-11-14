@@ -2,10 +2,12 @@ import streamlit as st
 import math
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import streamlit as st
 
 st.set_page_config(page_title="Fons Laadplan", layout="wide")
 
-st.markdown("""
+st.markdown(
+    """
     <style>
         .block-container { padding-top: 1rem !important; }
         div[data-testid="stColumn"] { display: flex; flex-direction: column; }
@@ -15,27 +17,70 @@ st.markdown("""
             min-height: 43px; display: flex; align-items: center; justify-content: center;
         }
     </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 st.title("Fons Laadplan 2.0 🚛")
 
 container_type = st.selectbox(
-    "1. Kies container:", 
-    ["45ft Container (13550 x 2426 mm)", "40ft Container (12030 x 2350 mm)", "20ft Container (5898 x 2350 mm)"]
+    "1. Kies container:",
+    [
+        "45ft Container (13550 x 2426 mm)",
+        "40ft Container (12030 x 2350 mm)",
+        "20ft Container (5898 x 2350 mm)",
+    ],
 )
 
-max_lengte = 13550 if "45ft" in container_type else 12030 if "40ft" in container_type else 5898
+max_lengte = (
+    13550
+    if "45ft" in container_type
+    else 12030 if "40ft" in container_type else 5898
+)
 max_breedte = 2426 if "45ft" in container_type else 2350
 
-if "klik_volgorde" not in st.session_state: st.session_state.klik_volgorde = []
-if "reset_id" not in st.session_state: st.session_state.reset_id = 0
+if "klik_volgorde" not in st.session_state:
+    st.session_state.klik_volgorde = []
+if "reset_id" not in st.session_state:
+    st.session_state.reset_id = 0
 
 product_info = {
-    "CP3": {"lengte": 1150, "breedte": 1150, "kleur": "#3498db", "stapelbaar": False, "label": "CP3"},
-    "CP7_600": {"lengte": 1400, "breedte": 1100, "kleur": "#2ecc71", "stapelbaar": True, "label": "CP7 600"},
-    "CP7_750": {"lengte": 1400, "breedte": 1200, "kleur": "#c0392b", "stapelbaar": True, "label": "CP7 750"},
-    "IBC": {"lengte": 1000, "breedte": 1200, "kleur": "#f1c40f", "stapelbaar": False, "label": "IBC"},
-    "Maatwerk": {"lengte": 1000, "breedte": 1000, "kleur": "#7f8c8d", "stapelbaar": False, "label": "Maatwerk"}
+    "CP3": {
+        "lengte": 1150,
+        "breedte": 1150,
+        "kleur": "#3498db",
+        "stapelbaar": False,
+        "label": "CP3",
+    },
+    "CP7_600": {
+        "lengte": 1400,
+        "breedte": 1100,
+        "kleur": "#2ecc71",
+        "stapelbaar": True,
+        "label": "CP7 600",
+        "fontsize": 8,  # Aangepast voor dwars passen
+    },
+    "CP7_750": {
+        "lengte": 1400,
+        "breedte": 1200,
+        "kleur": "#e74c3c",  # Lichter rood ipv donkerrood (#c0392b)
+        "stapelbaar": True,
+        "label": "CP7 750",
+    },
+    "IBC": {
+        "lengte": 1000,
+        "breedte": 1200,
+        "kleur": "#f1c40f",
+        "stapelbaar": False,
+        "label": "IBC",
+    },
+    "Maatwerk": {
+        "lengte": 1000,
+        "breedte": 1000,
+        "kleur": "#7f8c8d",
+        "stapelbaar": False,
+        "label": "Maatwerk",
+    },
 }
 
 col_titel, col_wis = st.columns(2)
