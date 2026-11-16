@@ -3,3 +3,4 @@ matplotlib
 pypdf
 pytesseract
 pillow
+pillow-heif
