@@ -91,9 +91,26 @@ def verwerk_laadbon_tekst(volledige_tekst):
         "regels": []
     }
 
+    huidige_groep = None
+
     for regel in volledige_tekst.splitlines():
         r_upper = regel.upper().strip()
-        if not r_upper or "ITEMS TOTAL" in r_upper or "TOTAL" in r_upper:
+        if not r_upper:
+            continue
+
+        # Stop of sla totaalregels over
+        if "ITEMS TOTAL" in r_upper or "ITEM TOTAL" in r_upper:
+            continue
+
+        # Herken groepskoppen op de bon ("Stack. CP-7" of "Non-Stack. CP-3")
+        if "CP-7" in r_upper or "CP7" in r_upper or "STACK." in r_upper:
+            if "NON-STACK" not in r_upper and "NON STACK" not in r_upper:
+                huidige_groep = "CP7"
+        if "CP-3" in r_upper or "CP3" in r_upper or "NON-STACK" in r_upper or "NON STACK" in r_upper:
+            huidige_groep = "CP3"
+
+        # Sla de blauwe subtotaal-kopregels met een schuine streep over (bijv. "6 PAL / 3.600 KG" of "16 PAL / 16.000 KG")
+        if re.search(r'PAL\s*/', r_upper):
             continue
 
         pal_match = re.search(r'(\d+)\s*PAL\b', r_upper)
@@ -109,7 +126,18 @@ def verwerk_laadbon_tekst(volledige_tekst):
                 except ValueError:
                     gewicht_kg = 0
 
-            if "-NB" in r_upper or "-N8" in r_upper or "CP-7" in r_upper or "CP7" in r_upper:
+            # Bepaal het pallettype op basis van artikelcode op de regel, of anders op basis van de groepskop erboven
+            is_ibc = "CNPE" in r_upper
+            is_cp7 = any(code in r_upper for code in ["-NB", "-N8", "B-NB", "B-N8"]) or (not is_ibc and huidige_groep == "CP7")
+            is_sb1 = any(code in r_upper for code in ["-SB1", "-S81", "B-SB1", "K6-SB1"])
+            is_sb5 = any(code in r_upper for code in ["-SB5", "-S85", "-SBS", "B-SB5", "K6-SB5"])
+
+            if is_ibc:
+                res["ibc"] += aantal_pal
+                res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 1000
+                res["regels"].append(f"{aantal_pal}x IBC (CNPE)")
+
+            elif is_cp7:
                 kg_per_pal = (gewicht_kg / aantal_pal) if aantal_pal > 0 and gewicht_kg > 0 else 600
                 if kg_per_pal > 650:
                     res["cp7_750"] += aantal_pal
@@ -119,25 +147,20 @@ def verwerk_laadbon_tekst(volledige_tekst):
                     res["regels"].append(f"{aantal_pal}x CP7 600kg")
                 res["totaal_gewicht"] += gewicht_kg
 
-            elif "-SB5" in r_upper or "-S85" in r_upper:
-                res["cp3_500"] += aantal_pal
-                res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 500
-                res["regels"].append(f"{aantal_pal}x CP3 500kg (-SB5)")
-
-            elif "-SB1" in r_upper or "-S81" in r_upper:
+            elif is_sb1:
                 res["cp3_1000"] += aantal_pal
                 res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 1000
                 res["regels"].append(f"{aantal_pal}x CP3 1000kg (-SB1)")
 
-            elif "CP-3" in r_upper or "CP3" in r_upper:
-                res["cp3_500"] += aantal_pal
+            elif is_sb5 or huidige_groep == "CP3":
+                kg_per_pal = (gewicht_kg / aantal_pal) if aantal_pal > 0 and gewicht_kg > 0 else 500
+                if kg_per_pal > 750 and not is_sb5:
+                    res["cp3_1000"] += aantal_pal
+                    res["regels"].append(f"{aantal_pal}x CP3 1000kg")
+                else:
+                    res["cp3_500"] += aantal_pal
+                    res["regels"].append(f"{aantal_pal}x CP3 500kg")
                 res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 500
-                res["regels"].append(f"{aantal_pal}x CP3")
-
-            elif "CNPE" in r_upper:
-                res["ibc"] += aantal_pal
-                res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 1000
-                res["regels"].append(f"{aantal_pal}x IBC (CNPE)")
 
     return res
 
@@ -152,7 +175,7 @@ def lees_kaneka_bestand(bestand):
         try:
             afbeelding = Image.open(io.BytesIO(ruwe_bytes))
             afbeelding = afbeelding.convert("RGB")
-            volledige_tekst = pytesseract.image_to_string(afbeelding)
+            volledige_tekst = pytesseract.image_to_string(afbeelding, config="--psm 6")
             return verwerk_laadbon_tekst(volledige_tekst)
         except Exception:
             return "ONLEESBARE_FOTO"
