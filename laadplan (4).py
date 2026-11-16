@@ -5,7 +5,7 @@ import re
 import importlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from PIL import Image, ImageOps, ImageEnhance
+from PIL import Image, ImageOps
 
 try:
     from pillow_heif import register_heif_opener
@@ -79,7 +79,6 @@ st.markdown("""
         <div class="modern-subtitle">Slimme containerindeling, Laadbon import (PDF &amp; Foto) &amp; aslast-optimalisatie</div>
     </div>
 """, unsafe_allow_html=True)
-
 def verwerk_laadbon_tekst(volledige_tekst):
     res = {
         "cp3_500": 0,
@@ -178,14 +177,23 @@ def lees_kaneka_bestand(bestand):
             return "GEEN_OCR"
         try:
             afbeelding = Image.open(io.BytesIO(ruwe_bytes))
-            afbeelding = ImageOps.exif_transpose(afbeelding).convert("L")
+            afbeelding = ImageOps.exif_transpose(afbeelding).convert("RGB")
             w, h = afbeelding.size
-            if w < 2000:
-                schaal = 2000 / w
-                afbeelding = afbeelding.resize((int(w * schaal), int(h * schaal)), Image.Resampling.LANCZOS)
-            afbeelding = ImageEnhance.Contrast(afbeelding).enhance(2.0)
-            volledige_tekst = pytesseract.image_to_string(afbeelding, config="--psm 6")
-            return verwerk_laadbon_tekst(volledige_tekst)
+            if h > w:
+                afbeelding = afbeelding.rotate(-90, expand=True)
+
+            tekst_1 = pytesseract.image_to_string(afbeelding, config="--psm 6")
+            res_1 = verwerk_laadbon_tekst(tekst_1)
+            if res_1["regels"]:
+                return res_1
+
+            afbeelding_180 = afbeelding.rotate(180, expand=True)
+            tekst_2 = pytesseract.image_to_string(afbeelding_180, config="--psm 6")
+            res_2 = verwerk_laadbon_tekst(tekst_2)
+            if res_2["regels"]:
+                return res_2
+
+            return res_1
         except Exception:
             return "ONLEESBARE_FOTO"
 
@@ -201,7 +209,6 @@ def lees_kaneka_bestand(bestand):
         return verwerk_laadbon_tekst(volledige_tekst)
 
     return "GEEN_TEKST"
-
 if "klik_volgorde" not in st.session_state: st.session_state.klik_volgorde = []
 if "reset_id" not in st.session_state: st.session_state.reset_id = 0
 if "pdf_data" not in st.session_state: st.session_state.pdf_data = None
@@ -300,7 +307,6 @@ with col5:
         mw_B = st.number_input("B (mm):", min_value=1, value=1000, step=10, key=f"mw_b_{st.session_state.reset_id}")
         product_info["Maatwerk"]["lengte"] = mw_L
         product_info["Maatwerk"]["breedte"] = mw_B
-
 auto_aslast = False
 if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0:
     auto_aslast = st.checkbox("⚖️ Automatisch optimaliseren op aslast & oppervlakte (even CP7 altijd naast elkaar, enkele vooraan dwars)", value=(pdf_d is not None))
@@ -347,6 +353,7 @@ if not auto_aslast and (pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_t
             if pallets_mw > 0:
                 as_v_mw = st.number_input("MW VOR", min_value=0, max_value=pallets_mw, value=0, step=1, key=f"v_mw_{st.session_state.reset_id}")
                 as_a_mw = st.number_input("MW ACH", min_value=0, max_value=pallets_mw - as_v_mw, value=0, step=1, key=f"a_mw_{st.session_state.reset_id}")
+
 hoofd_cp7_600 = max(0, pallets_cp7_600_totaal - as_v_cp7_600 - as_a_cp7_600)
 if pallets_cp7_600_totaal > 0 and "CP7_600" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP7_600")
 
