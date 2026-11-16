@@ -1,9 +1,16 @@
 import streamlit as st
 import math
 import io
+import re
 import importlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+
+try:
+    from pypdf import PdfReader
+    PDF_BESCHIKBAAR = True
+except ImportError:
+    PDF_BESCHIKBAAR = False
 
 st.set_page_config(page_title="Fons Laadplan", layout="wide")
 
@@ -56,10 +63,94 @@ st.markdown("""
     </style>
     <div class="modern-header">
         <div class="modern-title">FONS LAADPLAN <span style="font-weight:400; font-size:1.3rem;">| 2.0</span></div>
-        <div class="modern-subtitle">Slimme containerindeling &amp; aslast-optimalisatie</div>
+        <div class="modern-subtitle">Slimme containerindeling, PDF-laadbon import &amp; aslast-optimalisatie</div>
     </div>
 """, unsafe_allow_html=True)
 
+def lees_kaneka_laadbon(pdf_bestand):
+    reader = PdfReader(pdf_bestand)
+    volledige_tekst = ""
+    for pagina in reader.pages:
+        volledige_tekst += "\n" + (pagina.extract_text() or "")
+
+    res = {
+        "cp3_500": 0,
+        "cp3_1000": 0,
+        "cp7_600": 0,
+        "cp7_750": 0,
+        "ibc": 0,
+        "totaal_gewicht": 0,
+        "regels": []
+    }
+
+    for regel in volledige_tekst.splitlines():
+        r_upper = regel.upper().strip()
+        if not r_upper:
+            continue
+
+        pal_match = re.search(r'(\d+)\s*PAL\b', r_upper)
+        kg_match = re.search(r'([\d\.,]+)\s*KG\b', r_upper)
+
+        if pal_match:
+            aantal_pal = int(pal_match.group(1))
+            gewicht_kg = 0
+            if kg_match:
+                kg_str = kg_match.group(1).replace(".", "").replace(",", ".")
+                try:
+                    gewicht_kg = int(float(kg_str))
+                except ValueError:
+                    gewicht_kg = 0
+
+            if "ITEMS TOTAL" in r_upper or "TOTAL" in r_upper:
+                continue
+
+            if "-NB" in r_upper:
+                kg_per_pal = (gewicht_kg / aantal_pal) if aantal_pal > 0 and gewicht_kg > 0 else 600
+                if kg_per_pal > 650:
+                    res["cp7_750"] += aantal_pal
+                    res["regels"].append(f"{aantal_pal}x CP7 750kg ({gewicht_kg} kg)")
+                else:
+                    res["cp7_600"] += aantal_pal
+                    res["regels"].append(f"{aantal_pal}x CP7 600kg ({gewicht_kg} kg)")
+                res["totaal_gewicht"] += gewicht_kg
+
+            elif "-SB5" in r_upper:
+                res["cp3_500"] += aantal_pal
+                res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 500
+                res["regels"].append(f"{aantal_pal}x CP3 500kg (-SB5)")
+
+            elif "-SB1" in r_upper:
+                res["cp3_1000"] += aantal_pal
+                res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 1000
+                res["regels"].append(f"{aantal_pal}x CP3 1000kg (-SB1)")
+
+            elif "CNPE" in r_upper:
+                res["ibc"] += aantal_pal
+                res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 1000
+                res["regels"].append(f"{aantal_pal}x IBC (CNPE)")
+
+    return res
+
+if "klik_volgorde" not in st.session_state: st.session_state.klik_volgorde = []
+if "reset_id" not in st.session_state: st.session_state.reset_id = 0
+if "pdf_data" not in st.session_state: st.session_state.pdf_data = None
+if "laatste_pdf_naam" not in st.session_state: st.session_state.laatste_pdf_naam = ""
+
+with st.expander("📄 Laadbon importeren (PDF) — Automatisch invullen & aslast optimaliseren", expanded=True):
+    if not PDF_BESCHIKBAAR:
+        st.warning("⚠️ Voeg `pypdf` toe aan je `requirements.txt` om PDF-laadbonnen te kunnen inlezen.")
+    else:
+        geuploade_pdf = st.file_uploader("Sleep hier de Kaneka Loading List (PDF) naartoe:", type=["pdf"], key=f"pdf_up_{st.session_state.reset_id}")
+        if geuploade_pdf is not None and geuploade_pdf.name != st.session_state.laatste_pdf_naam:
+            data = lees_kaneka_laadbon(geuploade_pdf)
+            st.session_state.pdf_data = data
+            st.session_state.laatste_pdf_naam = geuploade_pdf.name
+            st.session_state.reset_id += 1
+            st.rerun()
+
+        if st.session_state.pdf_data:
+            d = st.session_state.pdf_data
+            st.success(f"✅ **Bon ingelezen:** {' | '.join(d['regels'])} — **Totaal gewicht:** {d['totaal_gewicht']} kg")
 st.write("### 1. Kies container:")
 container_type = st.selectbox(
     "1. Kies container:", 
@@ -70,9 +161,6 @@ container_type = st.selectbox(
 max_lengte = 13550 if "45ft" in container_type else 12030 if "40ft" in container_type else 5898
 max_breedte = 2426 if "45ft" in container_type else 2350
 
-if "klik_volgorde" not in st.session_state: st.session_state.klik_volgorde = []
-if "reset_id" not in st.session_state: st.session_state.reset_id = 0
-
 product_info = {
     "CP3": {"lengte": 1150, "breedte": 1150, "kleur": "#3498db", "stapelbaar": False, "label": "CP3"},
     "CP7_600": {"lengte": 1400, "breedte": 1100, "kleur": "#2ecc71", "stapelbaar": True, "label": "CP7 600"},
@@ -80,11 +168,20 @@ product_info = {
     "IBC": {"lengte": 1000, "breedte": 1200, "kleur": "#f1c40f", "stapelbaar": False, "label": "IBC"},
     "Maatwerk": {"lengte": 1000, "breedte": 1000, "kleur": "#7f8c8d", "stapelbaar": False, "label": "Maatwerk"}
 }
+
+pdf_d = st.session_state.pdf_data
+init_cp3 = (pdf_d["cp3_500"] + pdf_d["cp3_1000"]) if pdf_d else 0
+init_cp7_600 = pdf_d["cp7_600"] if pdf_d else 0
+init_cp7_750 = pdf_d["cp7_750"] if pdf_d else 0
+init_ibc = pdf_d["ibc"] if pdf_d else 0
+
 col_titel, col_wis = st.columns(2)
 with col_titel: st.write("### 2. Vul aantal pallets in:")
 with col_wis:
     if st.button("🗑️ Wis alles", type="primary", use_container_width=True):
         st.session_state.klik_volgorde = []
+        st.session_state.pdf_data = None
+        st.session_state.laatste_pdf_naam = ""
         st.session_state.reset_id += 1
         st.rerun()
 
@@ -92,20 +189,20 @@ col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     st.markdown('<div class="custom-box" style="background-color:#3498db;">CP3 (1150x1150)</div>', unsafe_allow_html=True)
-    pallets_cp3 = st.number_input("Aantal CP3", min_value=0, value=0, step=1, key=f"cp3_{st.session_state.reset_id}", label_visibility="collapsed")
+    pallets_cp3 = st.number_input("Aantal CP3", min_value=0, value=init_cp3, step=1, key=f"cp3_{st.session_state.reset_id}", label_visibility="collapsed")
     if pallets_cp3 > 0 and "CP3" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP3")
 
 with col2:
     st.markdown('<div class="custom-box" style="background-color:#2ecc71;">CP7 600kg (1400x1100)</div>', unsafe_allow_html=True)
-    pallets_cp7_600_totaal = st.number_input("Aantal CP7 600", min_value=0, value=0, step=1, key=f"cp7_600_{st.session_state.reset_id}", label_visibility="collapsed")
+    pallets_cp7_600_totaal = st.number_input("Aantal CP7 600", min_value=0, value=init_cp7_600, step=1, key=f"cp7_600_{st.session_state.reset_id}", label_visibility="collapsed")
 
 with col3:
     st.markdown('<div class="custom-box" style="background-color:#e74c3c;">CP7 750kg (1400x1200)</div>', unsafe_allow_html=True)
-    pallets_cp7_750_totaal = st.number_input("Aantal CP7 750", min_value=0, value=0, step=1, key=f"cp7_750_{st.session_state.reset_id}", label_visibility="collapsed")
+    pallets_cp7_750_totaal = st.number_input("Aantal CP7 750", min_value=0, value=init_cp7_750, step=1, key=f"cp7_750_{st.session_state.reset_id}", label_visibility="collapsed")
 
 with col4:
     st.markdown('<div class="custom-box" style="background-color:#f1c40f; color:black;">IBC (1000x1200)</div>', unsafe_allow_html=True)
-    pallets_ibc = st.number_input("Aantal IBC", min_value=0, value=0, step=1, key=f"ibc_{st.session_state.reset_id}", label_visibility="collapsed")
+    pallets_ibc = st.number_input("Aantal IBC", min_value=0, value=init_ibc, step=1, key=f"ibc_{st.session_state.reset_id}", label_visibility="collapsed")
     if pallets_ibc > 0 and "IBC" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("IBC")
 
 with col5:
@@ -118,6 +215,10 @@ with col5:
         product_info["Maatwerk"]["lengte"] = mw_L
         product_info["Maatwerk"]["breedte"] = mw_B
 
+auto_aslast = False
+if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0:
+    auto_aslast = st.checkbox("⚖️ Automatisch optimaliseren op aslast & oppervlakte (even CP7 altijd naast elkaar, enkele vooraan dwars)", value=(pdf_d is not None))
+
 as_v_cp3, as_a_cp3 = 0, 0
 as_v_cp7_600, as_a_cp7_600 = 0, 0
 as_v_cp7_750, as_a_cp7_750 = 0, 0
@@ -129,8 +230,8 @@ richting_a_cp7_600 = "Lang (1400x1100)"
 richting_v_cp7_750 = "Lang (1400x1200)"
 richting_a_cp7_750 = "Lang (1400x1200)"
 
-if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0:
-    with st.expander("⚖️ Klik hier voor extra aslast-regelingen (Midden vooraan/achteraan)"):
+if not auto_aslast and (pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0):
+    with st.expander("⚖️ Klik hier voor handmatige aslast-regelingen (Midden vooraan/achteraan)"):
         v_col1, v_col2, v_col3, v_col4, v_col5 = st.columns(5)
         with v_col1:
             if pallets_cp3 > 0:
@@ -141,7 +242,6 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
                 as_v_cp7_600 = st.number_input("CP7 600 VOR", min_value=0, max_value=pallets_cp7_600_totaal, value=0, step=1, key=f"v_cp7_600_{st.session_state.reset_id}")
                 if as_v_cp7_600 > 0:
                     richting_v_cp7_600 = st.radio("Richting VOR (600):", ["Lang (1400x1100)", "Smal (1100x1400)"], key=f"r_v_cp7_600_{st.session_state.reset_id}")
-
                 as_a_cp7_600 = st.number_input("CP7 600 ACH", min_value=0, max_value=pallets_cp7_600_totaal - as_v_cp7_600, value=0, step=1, key=f"a_cp7_600_{st.session_state.reset_id}")
                 if as_a_cp7_600 > 0:
                     richting_a_cp7_600 = st.radio("Richting ACH (600):", ["Lang (1400x1100)", "Smal (1100x1400)"], key=f"r_a_cp7_600_{st.session_state.reset_id}")
@@ -150,7 +250,6 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
                 as_v_cp7_750 = st.number_input("CP7 750 VOR", min_value=0, max_value=pallets_cp7_750_totaal, value=0, step=1, key=f"v_cp7_750_{st.session_state.reset_id}")
                 if as_v_cp7_750 > 0:
                     richting_v_cp7_750 = st.radio("Richting VOR (750):", ["Lang (1400x1200)", "Smal (1200x1400)"], key=f"r_v_cp7_750_{st.session_state.reset_id}")
-
                 as_a_cp7_750 = st.number_input("CP7 750 ACH", min_value=0, max_value=pallets_cp7_750_totaal - as_v_cp7_750, value=0, step=1, key=f"a_cp7_750_{st.session_state.reset_id}")
                 if as_a_cp7_750 > 0:
                     richting_a_cp7_750 = st.radio("Richting ACH (750):", ["Lang (1400x1200)", "Smal (1200x1400)"], key=f"r_a_cp7_750_{st.session_state.reset_id}")
@@ -169,9 +268,9 @@ hoofd_cp7_750 = max(0, pallets_cp7_750_totaal - as_v_cp7_750 - as_a_cp7_750)
 if pallets_cp7_750_totaal > 0 and "CP7_750" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP7_750")
 
 with col2:
-    if pallets_cp7_600_totaal > 0: st.write(f"➡️ **Gewone CP7 600 over:** {hoofd_cp7_600}")
+    if pallets_cp7_600_totaal > 0 and not auto_aslast: st.write(f"➡️ **Gewone CP7 600 over:** {hoofd_cp7_600}")
 with col3:
-    if pallets_cp7_750_totaal > 0: st.write(f"➡️ **Gewone CP7 750 over:** {hoofd_cp7_750}")
+    if pallets_cp7_750_totaal > 0 and not auto_aslast: st.write(f"➡️ **Gewone CP7 750 over:** {hoofd_cp7_750}")
 
 hoofd_cp3 = max(0, pallets_cp3 - as_v_cp3 - as_a_cp3)
 hoofd_ibc = max(0, pallets_ibc - as_v_ibc - as_a_ibc)
@@ -201,9 +300,11 @@ def voeg_partij_toe_aslast(art_naam, aantal, richting):
             overgebleven -= 2
             laad_lijst.append({"naam": f"{info['label']}{h_label}", "naam_puur": art_naam, "L": info["lengte"], "B": info["breedte"], "kleur": gekozen_kleur, "force_midden": True})
 
-def voeg_partij_toe(art_naam, aantal):
+def voeg_partij_toe(art_naam, aantal, dwars=False):
     if aantal > 0:
-        info = product_info[art_naam]
+        info = product_info[art_naam].copy()
+        if dwars:
+            info["lengte"], info["breedte"] = info["breedte"], info["lengte"]
         vloer = int(math.ceil(aantal / 2)) if info["stapelbaar"] else int(aantal)
         overgebleven = aantal
         for _ in range(vloer):
@@ -212,20 +313,61 @@ def voeg_partij_toe(art_naam, aantal):
             overgebleven -= 2
             laad_lijst.append({"naam": f"{info['label']}{h_label}", "naam_puur": art_naam, "L": info["lengte"], "B": info["breedte"], "kleur": gekozen_kleur, "force_midden": False})
 
-voeg_partij_toe_aslast("CP3", as_v_cp3, "Lang")
-voeg_partij_toe_aslast("CP7_600", as_v_cp7_600, richting_v_cp7_600)
-voeg_partij_toe_aslast("CP7_750", as_v_cp7_750, richting_v_cp7_750)
-voeg_partij_toe_aslast("IBC", as_v_ibc, "Lang")
-voeg_partij_toe_aslast("Maatwerk", as_v_mw, "Lang")
+if auto_aslast:
+    # 1. Even aantallen vloerplaatsen CP7 worden ALTIJD in paren naast elkaar gezet (dus veelvoud van 4 pallets = 2 stapels van 2H naast elkaar).
+    # 2. Alleen als een CP7-partij een oneven aantal vloerplaatsen heeft (bijv. 6 pallets = 3 stapels -> 1 enkele stapel over),
+    #    komt die ene enkele stapel helemaal vooraan in het midden dwars te staan ("Smal"), waarna alle overige stapels als even paren naast elkaar komen.
+    rest_600 = pallets_cp7_600_totaal
+    rest_750 = pallets_cp7_750_totaal
 
-for art_naam in st.session_state.klik_volgorde:
-    if art_naam in actuele_aantallen: voeg_partij_toe(art_naam, actuele_aantallen[art_naam])
+    vloer_600 = math.ceil(rest_600 / 2)
+    if vloer_600 % 2 == 1 and rest_600 > 0:
+        enkele_600 = 1 if rest_600 % 2 == 1 else 2
+        voeg_partij_toe_aslast("CP7_600", enkele_600, "Smal (1100x1400)")
+        rest_600 -= enkele_600
 
-voeg_partij_toe_aslast("CP3", as_a_cp3, "Lang")
-voeg_partij_toe_aslast("CP7_600", as_a_cp7_600, richting_a_cp7_600)
-voeg_partij_toe_aslast("CP7_750", as_a_cp7_750, richting_a_cp7_750)
-voeg_partij_toe_aslast("IBC", as_a_ibc, "Lang")
-voeg_partij_toe_aslast("Maatwerk", as_a_mw, "Lang")
+    vloer_750 = math.ceil(rest_750 / 2)
+    if vloer_750 % 2 == 1 and rest_750 > 0:
+        enkele_750 = 1 if rest_750 % 2 == 1 else 2
+        voeg_partij_toe_aslast("CP7_750", enkele_750, "Smal (1200x1400)")
+        rest_750 -= enkele_750
+
+    # Splits CP3 uit PDF in 500kg (licht -> vooraan & achteraan om aslast te sparen) en 1000kg (zwaar -> in het midden)
+    cp3_licht = pdf_d["cp3_500"] if pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3) else pallets_cp3
+    cp3_zwaar = pdf_d["cp3_1000"] if pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3) else 0
+
+    # Houd CP3 vooraan even zodat er geen verspringing in de rij ontstaat voor de CP7-paren daarachter
+    cp3_licht_voor = (cp3_licht // 4) * 2
+    if cp3_licht_voor == 0 and cp3_licht >= 2:
+        cp3_licht_voor = 2
+    cp3_licht_achter = max(0, cp3_licht - cp3_licht_voor)
+
+    # Vooraan (achter de eventuele dwarse koppallet): lichte CP3 (even paar)
+    voeg_partij_toe("CP3", cp3_licht_voor)
+    # Midden: alle overgebleven CP7 600kg & CP7 750kg (nu gegarandeerd even aantallen vloerplaatsen -> strak naast elkaar!)
+    voeg_partij_toe("CP7_600", rest_600)
+    voeg_partij_toe("CP7_750", rest_750)
+    # Daarna zware CP3 (1000kg), IBC en Maatwerk
+    voeg_partij_toe("CP3", cp3_zwaar)
+    voeg_partij_toe("IBC", pallets_ibc)
+    voeg_partij_toe("Maatwerk", pallets_mw)
+    # Helemaal achteraan bij de deuren: resterende lichte CP3
+    voeg_partij_toe("CP3", cp3_licht_achter)
+else:
+    voeg_partij_toe_aslast("CP3", as_v_cp3, "Lang")
+    voeg_partij_toe_aslast("CP7_600", as_v_cp7_600, richting_v_cp7_600)
+    voeg_partij_toe_aslast("CP7_750", as_v_cp7_750, richting_v_cp7_750)
+    voeg_partij_toe_aslast("IBC", as_v_ibc, "Lang")
+    voeg_partij_toe_aslast("Maatwerk", as_v_mw, "Lang")
+
+    for art_naam in st.session_state.klik_volgorde:
+        if art_naam in actuele_aantallen: voeg_partij_toe(art_naam, actuele_aantallen[art_naam])
+
+    voeg_partij_toe_aslast("CP3", as_a_cp3, "Lang")
+    voeg_partij_toe_aslast("CP7_600", as_a_cp7_600, richting_a_cp7_600)
+    voeg_partij_toe_aslast("CP7_750", as_a_cp7_750, richting_a_cp7_750)
+    voeg_partij_toe_aslast("IBC", as_a_ibc, "Lang")
+    voeg_partij_toe_aslast("Maatwerk", as_a_mw, "Lang")
 fig, ax = plt.subplots(figsize=(15, 3.5))
 ax.set_xlim(0, max_lengte); ax.set_ylim(0, max_breedte); ax.set_aspect('equal', adjustable='box')
 container_border = patches.Rectangle((0, 0), max_lengte, max_breedte, linewidth=2, edgecolor='black', facecolor='none')
@@ -311,7 +453,7 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
         mime="image/png"
     )
 else:
-    st.info("Container is leeg. Gebruik de + en - knoppen om te beginnen.")
+    st.info("Container is leeg. Upload een PDF-laadbon of gebruik de + en - knoppen om te beginnen.")
 
 st.divider()
 import magazijn
