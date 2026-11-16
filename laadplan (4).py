@@ -5,12 +5,19 @@ import re
 import importlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from PIL import Image
 
 try:
     from pypdf import PdfReader
     PDF_BESCHIKBAAR = True
 except ImportError:
     PDF_BESCHIKBAAR = False
+
+try:
+    import pytesseract
+    OCR_BESCHIKBAAR = True
+except ImportError:
+    OCR_BESCHIKBAAR = False
 
 st.set_page_config(page_title="Fons Laadplan", layout="wide")
 
@@ -63,16 +70,11 @@ st.markdown("""
     </style>
     <div class="modern-header">
         <div class="modern-title">FONS LAADPLAN <span style="font-weight:400; font-size:1.3rem;">| 2.0</span></div>
-        <div class="modern-subtitle">Slimme containerindeling, PDF-laadbon import &amp; aslast-optimalisatie</div>
+        <div class="modern-subtitle">Slimme containerindeling, Laadbon import (PDF &amp; Foto) &amp; aslast-optimalisatie</div>
     </div>
 """, unsafe_allow_html=True)
 
-def lees_kaneka_laadbon(pdf_bestand):
-    reader = PdfReader(pdf_bestand)
-    volledige_tekst = ""
-    for pagina in reader.pages:
-        volledige_tekst += "\n" + (pagina.extract_text() or "")
-
+def verwerk_laadbon_tekst(volledige_tekst):
     res = {
         "cp3_500": 0,
         "cp3_1000": 0,
@@ -85,7 +87,7 @@ def lees_kaneka_laadbon(pdf_bestand):
 
     for regel in volledige_tekst.splitlines():
         r_upper = regel.upper().strip()
-        if not r_upper:
+        if not r_upper or "ITEMS TOTAL" in r_upper or "TOTAL" in r_upper:
             continue
 
         pal_match = re.search(r'(\d+)\s*PAL\b', r_upper)
@@ -101,28 +103,30 @@ def lees_kaneka_laadbon(pdf_bestand):
                 except ValueError:
                     gewicht_kg = 0
 
-            if "ITEMS TOTAL" in r_upper or "TOTAL" in r_upper:
-                continue
-
-            if "-NB" in r_upper:
+            if "-NB" in r_upper or "-N8" in r_upper or "CP-7" in r_upper or "CP7" in r_upper:
                 kg_per_pal = (gewicht_kg / aantal_pal) if aantal_pal > 0 and gewicht_kg > 0 else 600
                 if kg_per_pal > 650:
                     res["cp7_750"] += aantal_pal
-                    res["regels"].append(f"{aantal_pal}x CP7 750kg ({gewicht_kg} kg)")
+                    res["regels"].append(f"{aantal_pal}x CP7 750kg")
                 else:
                     res["cp7_600"] += aantal_pal
-                    res["regels"].append(f"{aantal_pal}x CP7 600kg ({gewicht_kg} kg)")
+                    res["regels"].append(f"{aantal_pal}x CP7 600kg")
                 res["totaal_gewicht"] += gewicht_kg
 
-            elif "-SB5" in r_upper:
+            elif "-SB5" in r_upper or "-S85" in r_upper:
                 res["cp3_500"] += aantal_pal
                 res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 500
                 res["regels"].append(f"{aantal_pal}x CP3 500kg (-SB5)")
 
-            elif "-SB1" in r_upper:
+            elif "-SB1" in r_upper or "-S81" in r_upper:
                 res["cp3_1000"] += aantal_pal
                 res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 1000
                 res["regels"].append(f"{aantal_pal}x CP3 1000kg (-SB1)")
+
+            elif "CP-3" in r_upper or "CP3" in r_upper:
+                res["cp3_500"] += aantal_pal
+                res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 500
+                res["regels"].append(f"{aantal_pal}x CP3")
 
             elif "CNPE" in r_upper:
                 res["ibc"] += aantal_pal
@@ -131,26 +135,62 @@ def lees_kaneka_laadbon(pdf_bestand):
 
     return res
 
+def lees_kaneka_bestand(bestand):
+    naam = bestand.name.lower()
+    volledige_tekst = ""
+
+    if naam.endswith((".jpg", ".jpeg", ".png")):
+        if not OCR_BESCHIKBAAR:
+            return "GEEN_OCR"
+        afbeelding = Image.open(bestand)
+        volledige_tekst = pytesseract.image_to_string(afbeelding)
+        return verwerk_laadbon_tekst(volledige_tekst)
+
+    if PDF_BESCHIKBAAR:
+        try:
+            pdf_bytes = io.BytesIO(bestand.getvalue())
+            reader = PdfReader(pdf_bytes)
+            for pagina in reader.pages:
+                volledige_tekst += "\n" + (pagina.extract_text() or "")
+        except Exception:
+            return "CORRUPT_PDF"
+
+    if volledige_tekst.strip():
+        return verwerk_laadbon_tekst(volledige_tekst)
+
+    return "GEEN_TEKST"
+
 if "klik_volgorde" not in st.session_state: st.session_state.klik_volgorde = []
 if "reset_id" not in st.session_state: st.session_state.reset_id = 0
 if "pdf_data" not in st.session_state: st.session_state.pdf_data = None
 if "laatste_pdf_naam" not in st.session_state: st.session_state.laatste_pdf_naam = ""
 
-with st.expander("📄 Laadbon importeren (PDF) — Automatisch invullen & aslast optimaliseren", expanded=True):
-    if not PDF_BESCHIKBAAR:
-        st.warning("⚠️ Voeg `pypdf` toe aan je `requirements.txt` om PDF-laadbonnen te kunnen inlezen.")
-    else:
-        geuploade_pdf = st.file_uploader("Sleep hier de Kaneka Loading List (PDF) naartoe:", type=["pdf"], key=f"pdf_up_{st.session_state.reset_id}")
-        if geuploade_pdf is not None and geuploade_pdf.name != st.session_state.laatste_pdf_naam:
-            data = lees_kaneka_laadbon(geuploade_pdf)
+with st.expander("📄 Laadbon importeren (PDF of Foto) — Automatisch invullen & aslast optimaliseren", expanded=True):
+    geupload_bestand = st.file_uploader(
+        "Upload hier de Kaneka Loading List (digitale PDF of scherpe foto JPG/PNG):",
+        type=["pdf", "jpg", "jpeg", "png"],
+        key=f"pdf_up_{st.session_state.reset_id}"
+    )
+    if geupload_bestand is not None and geupload_bestand.name != st.session_state.laatste_pdf_naam:
+        data = lees_kaneka_bestand(geupload_bestand)
+        if data == "CORRUPT_PDF":
+            st.error("❌ Dit PDF-bestand is onvolledig opgeslagen. Upload de foto direct als **JPG/PNG** of gebruik de originele PDF uit SAP.")
+        elif data == "GEEN_TEKST":
+            st.warning("⚠️ Deze PDF bevat alleen een afbeelding zonder tekstlaag. Upload de foto direct als **JPG/PNG** (uit je fotorol) zodat tekstherkenning hem kan lezen.")
+        elif data == "GEEN_OCR":
+            st.warning("⚠️ Voeg `pytesseract` en `packages.txt` (`tesseract-ocr`) toe op GitHub om foto's te kunnen uitlezen.")
+        else:
             st.session_state.pdf_data = data
-            st.session_state.laatste_pdf_naam = geuploade_pdf.name
+            st.session_state.laatste_pdf_naam = geupload_bestand.name
             st.session_state.reset_id += 1
             st.rerun()
 
-        if st.session_state.pdf_data:
-            d = st.session_state.pdf_data
+    if st.session_state.pdf_data:
+        d = st.session_state.pdf_data
+        if d["regels"]:
             st.success(f"✅ **Bon ingelezen:** {' | '.join(d['regels'])} — **Totaal gewicht:** {d['totaal_gewicht']} kg")
+        else:
+            st.warning("⚠️ Bestand gelezen, maar geen regels met `PAL` en `-NB / -SB5 / -SB1 / CNPE` herkend. Maak een rechtere/scherpere foto of gebruik de SAP-PDF.")
 st.write("### 1. Kies container:")
 container_type = st.selectbox(
     "1. Kies container:", 
@@ -314,9 +354,6 @@ def voeg_partij_toe(art_naam, aantal, dwars=False):
             laad_lijst.append({"naam": f"{info['label']}{h_label}", "naam_puur": art_naam, "L": info["lengte"], "B": info["breedte"], "kleur": gekozen_kleur, "force_midden": False})
 
 if auto_aslast:
-    # 1. Even aantallen vloerplaatsen CP7 worden ALTIJD in paren naast elkaar gezet (dus veelvoud van 4 pallets = 2 stapels van 2H naast elkaar).
-    # 2. Alleen als een CP7-partij een oneven aantal vloerplaatsen heeft (bijv. 6 pallets = 3 stapels -> 1 enkele stapel over),
-    #    komt die ene enkele stapel helemaal vooraan in het midden dwars te staan ("Smal"), waarna alle overige stapels als even paren naast elkaar komen.
     rest_600 = pallets_cp7_600_totaal
     rest_750 = pallets_cp7_750_totaal
 
@@ -332,26 +369,20 @@ if auto_aslast:
         voeg_partij_toe_aslast("CP7_750", enkele_750, "Smal (1200x1400)")
         rest_750 -= enkele_750
 
-    # Splits CP3 uit PDF in 500kg (licht -> vooraan & achteraan om aslast te sparen) en 1000kg (zwaar -> in het midden)
     cp3_licht = pdf_d["cp3_500"] if pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3) else pallets_cp3
     cp3_zwaar = pdf_d["cp3_1000"] if pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3) else 0
 
-    # Houd CP3 vooraan even zodat er geen verspringing in de rij ontstaat voor de CP7-paren daarachter
     cp3_licht_voor = (cp3_licht // 4) * 2
     if cp3_licht_voor == 0 and cp3_licht >= 2:
         cp3_licht_voor = 2
     cp3_licht_achter = max(0, cp3_licht - cp3_licht_voor)
 
-    # Vooraan (achter de eventuele dwarse koppallet): lichte CP3 (even paar)
     voeg_partij_toe("CP3", cp3_licht_voor)
-    # Midden: alle overgebleven CP7 600kg & CP7 750kg (nu gegarandeerd even aantallen vloerplaatsen -> strak naast elkaar!)
     voeg_partij_toe("CP7_600", rest_600)
     voeg_partij_toe("CP7_750", rest_750)
-    # Daarna zware CP3 (1000kg), IBC en Maatwerk
     voeg_partij_toe("CP3", cp3_zwaar)
     voeg_partij_toe("IBC", pallets_ibc)
     voeg_partij_toe("Maatwerk", pallets_mw)
-    # Helemaal achteraan bij de deuren: resterende lichte CP3
     voeg_partij_toe("CP3", cp3_licht_achter)
 else:
     voeg_partij_toe_aslast("CP3", as_v_cp3, "Lang")
@@ -453,7 +484,7 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
         mime="image/png"
     )
 else:
-    st.info("Container is leeg. Upload een PDF-laadbon of gebruik de + en - knoppen om te beginnen.")
+    st.info("Container is leeg. Upload een PDF/foto-laadbon of gebruik de + en - knoppen om te beginnen.")
 
 st.divider()
 import magazijn
