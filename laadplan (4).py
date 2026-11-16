@@ -8,6 +8,12 @@ import matplotlib.patches as patches
 from PIL import Image
 
 try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+except ImportError:
+    pass
+
+try:
     from pypdf import PdfReader
     PDF_BESCHIKBAAR = True
 except ImportError:
@@ -137,19 +143,23 @@ def verwerk_laadbon_tekst(volledige_tekst):
 
 def lees_kaneka_bestand(bestand):
     naam = bestand.name.lower()
+    ruwe_bytes = bestand.getvalue()
     volledige_tekst = ""
 
-    if naam.endswith((".jpg", ".jpeg", ".png")):
+    if naam.endswith((".jpg", ".jpeg", ".png", ".heic", ".heif")):
         if not OCR_BESCHIKBAAR:
             return "GEEN_OCR"
-        afbeelding = Image.open(bestand)
-        volledige_tekst = pytesseract.image_to_string(afbeelding)
-        return verwerk_laadbon_tekst(volledige_tekst)
+        try:
+            afbeelding = Image.open(io.BytesIO(ruwe_bytes))
+            afbeelding = afbeelding.convert("RGB")
+            volledige_tekst = pytesseract.image_to_string(afbeelding)
+            return verwerk_laadbon_tekst(volledige_tekst)
+        except Exception:
+            return "ONLEESBARE_FOTO"
 
     if PDF_BESCHIKBAAR:
         try:
-            pdf_bytes = io.BytesIO(bestand.getvalue())
-            reader = PdfReader(pdf_bytes)
+            reader = PdfReader(io.BytesIO(ruwe_bytes))
             for pagina in reader.pages:
                 volledige_tekst += "\n" + (pagina.extract_text() or "")
         except Exception:
@@ -167,16 +177,18 @@ if "laatste_pdf_naam" not in st.session_state: st.session_state.laatste_pdf_naam
 
 with st.expander("📄 Laadbon importeren (PDF of Foto) — Automatisch invullen & aslast optimaliseren", expanded=True):
     geupload_bestand = st.file_uploader(
-        "Upload hier de Kaneka Loading List (digitale PDF of scherpe foto JPG/PNG):",
-        type=["pdf", "jpg", "jpeg", "png"],
+        "Upload hier de Kaneka Loading List (digitale PDF of foto JPG/PNG/HEIC):",
+        type=["pdf", "jpg", "jpeg", "png", "heic", "heif"],
         key=f"pdf_up_{st.session_state.reset_id}"
     )
     if geupload_bestand is not None and geupload_bestand.name != st.session_state.laatste_pdf_naam:
         data = lees_kaneka_bestand(geupload_bestand)
         if data == "CORRUPT_PDF":
-            st.error("❌ Dit PDF-bestand is onvolledig opgeslagen. Upload de foto direct als **JPG/PNG** of gebruik de originele PDF uit SAP.")
+            st.error("❌ Dit PDF-bestand is onvolledig opgeslagen. Kies een foto uit je fotorol of gebruik de originele PDF uit SAP.")
+        elif data == "ONLEESBARE_FOTO":
+            st.error("❌ Dit afbeeldingsformaat kon niet worden geopend. Zorg dat `pillow-heif` in `requirements.txt` staat of maak een screenshot van de foto en upload die.")
         elif data == "GEEN_TEKST":
-            st.warning("⚠️ Deze PDF bevat alleen een afbeelding zonder tekstlaag. Upload de foto direct als **JPG/PNG** (uit je fotorol) zodat tekstherkenning hem kan lezen.")
+            st.warning("⚠️ Deze PDF bevat alleen een afbeelding zonder tekstlaag. Upload de foto direct uit je fotorol.")
         elif data == "GEEN_OCR":
             st.warning("⚠️ Voeg `pytesseract` en `packages.txt` (`tesseract-ocr`) toe op GitHub om foto's te kunnen uitlezen.")
         else:
