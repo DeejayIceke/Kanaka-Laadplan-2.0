@@ -5,7 +5,7 @@ import re
 import importlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from PIL import Image
+from PIL import Image, ImageOps, ImageEnhance
 
 try:
     from pillow_heif import register_heif_opener
@@ -88,7 +88,8 @@ def verwerk_laadbon_tekst(volledige_tekst):
         "cp7_750": 0,
         "ibc": 0,
         "totaal_gewicht": 0,
-        "regels": []
+        "regels": [],
+        "ruwe_tekst": volledige_tekst
     }
 
     huidige_groep = None
@@ -98,26 +99,30 @@ def verwerk_laadbon_tekst(volledige_tekst):
         if not r_upper:
             continue
 
-        # Stop of sla totaalregels over
         if "ITEMS TOTAL" in r_upper or "ITEM TOTAL" in r_upper:
             continue
 
-        # Herken groepskoppen op de bon ("Stack. CP-7" of "Non-Stack. CP-3")
-        if "CP-7" in r_upper or "CP7" in r_upper or "STACK." in r_upper:
-            if "NON-STACK" not in r_upper and "NON STACK" not in r_upper:
-                huidige_groep = "CP7"
-        if "CP-3" in r_upper or "CP3" in r_upper or "NON-STACK" in r_upper or "NON STACK" in r_upper:
+        if "CP-7" in r_upper or "CP7" in r_upper or "1,4X1,2" in r_upper or "1.4X1.2" in r_upper:
+            huidige_groep = "CP7"
+        if "CP-3" in r_upper or "CP3" in r_upper or "NON-STACK" in r_upper or "NON STACK" in r_upper or "1,2X1,2" in r_upper or "1.2X1.2" in r_upper:
             huidige_groep = "CP3"
 
-        # Sla de blauwe subtotaal-kopregels met een schuine streep over (bijv. "6 PAL / 3.600 KG" of "16 PAL / 16.000 KG")
-        if re.search(r'PAL\s*/', r_upper):
+        if re.search(r'PAL\s*/', r_upper) or ("BAG" not in r_upper and "/" in r_upper and "KG" in r_upper and not any(k in r_upper for k in ["1B/", "1D/", "1L/"])):
             continue
 
-        pal_match = re.search(r'(\d+)\s*PAL\b', r_upper)
+        pal_match = re.search(r'(\d+)\s*(?:PAL|PA[L1I])\b', r_upper)
+        if not pal_match and "BAG" in r_upper:
+            bag_fallback = re.search(r'\b(\d{1,2})\s+\d+\s*BAG\b', r_upper)
+            if bag_fallback:
+                pal_match = bag_fallback
+
         kg_match = re.search(r'([\d\.,]+)\s*KG\b', r_upper)
 
         if pal_match:
             aantal_pal = int(pal_match.group(1))
+            if aantal_pal <= 0 or aantal_pal > 60:
+                continue
+
             gewicht_kg = 0
             if kg_match:
                 kg_str = kg_match.group(1).replace(".", "").replace(",", ".")
@@ -126,11 +131,10 @@ def verwerk_laadbon_tekst(volledige_tekst):
                 except ValueError:
                     gewicht_kg = 0
 
-            # Bepaal het pallettype op basis van artikelcode op de regel, of anders op basis van de groepskop erboven
             is_ibc = "CNPE" in r_upper
-            is_cp7 = any(code in r_upper for code in ["-NB", "-N8", "B-NB", "B-N8"]) or (not is_ibc and huidige_groep == "CP7")
+            is_cp7 = any(code in r_upper for code in ["-NB", "-N8", "B-NB", "B-N8", "PA210"]) or (not is_ibc and huidige_groep == "CP7")
             is_sb1 = any(code in r_upper for code in ["-SB1", "-S81", "B-SB1", "K6-SB1"])
-            is_sb5 = any(code in r_upper for code in ["-SB5", "-S85", "-SBS", "B-SB5", "K6-SB5"])
+            is_sb5 = any(code in r_upper for code in ["-SB5", "-S85", "-SBS", "B-SB5", "K6-SB5", "B580", "B382"])
 
             if is_ibc:
                 res["ibc"] += aantal_pal
@@ -145,7 +149,7 @@ def verwerk_laadbon_tekst(volledige_tekst):
                 else:
                     res["cp7_600"] += aantal_pal
                     res["regels"].append(f"{aantal_pal}x CP7 600kg")
-                res["totaal_gewicht"] += gewicht_kg
+                res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 600
 
             elif is_sb1:
                 res["cp3_1000"] += aantal_pal
@@ -174,7 +178,12 @@ def lees_kaneka_bestand(bestand):
             return "GEEN_OCR"
         try:
             afbeelding = Image.open(io.BytesIO(ruwe_bytes))
-            afbeelding = afbeelding.convert("RGB")
+            afbeelding = ImageOps.exif_transpose(afbeelding).convert("L")
+            w, h = afbeelding.size
+            if w < 2000:
+                schaal = 2000 / w
+                afbeelding = afbeelding.resize((int(w * schaal), int(h * schaal)), Image.Resampling.LANCZOS)
+            afbeelding = ImageEnhance.Contrast(afbeelding).enhance(2.0)
             volledige_tekst = pytesseract.image_to_string(afbeelding, config="--psm 6")
             return verwerk_laadbon_tekst(volledige_tekst)
         except Exception:
@@ -225,7 +234,9 @@ with st.expander("📄 Laadbon importeren (PDF of Foto) — Automatisch invullen
         if d["regels"]:
             st.success(f"✅ **Bon ingelezen:** {' | '.join(d['regels'])} — **Totaal gewicht:** {d['totaal_gewicht']} kg")
         else:
-            st.warning("⚠️ Bestand gelezen, maar geen regels met `PAL` en `-NB / -SB5 / -SB1 / CNPE` herkend. Maak een rechtere/scherpere foto of gebruik de SAP-PDF.")
+            st.warning("⚠️ Bestand gelezen, maar geen regels herkend. Maak een rechtere/scherpere foto of gebruik de SAP-PDF.")
+        with st.expander("🔍 Bekijk uitgelezen tekst van de bon"):
+            st.text(d.get("ruwe_tekst", ""))
 st.write("### 1. Kies container:")
 container_type = st.selectbox(
     "1. Kies container:", 
