@@ -87,60 +87,55 @@ def verwerk_laadbon_tekst(volledige_tekst):
         "cp7_750": 0,
         "ibc": 0,
         "totaal_gewicht": 0,
+        "bon_totaal_pal": 0,
         "regels": [],
         "ruwe_tekst": volledige_tekst
     }
 
+    regels = [r.upper().strip() for r in volledige_tekst.splitlines() if r.strip()]
+
+    for r in regels:
+        if "ITEMS TOTAL" in r or "ITEM TOTAL" in r or "TOTAAL" in r:
+            tot_m = re.search(r'(\d+)\s*(?:PAL|PA[L1I])\b', r)
+            if tot_m:
+                res["bon_totaal_pal"] = int(tot_m.group(1))
+
     huidige_groep = None
+    groepskoppen_gevonden = False
 
-    for regel in volledige_tekst.splitlines():
-        r_upper = regel.upper().strip()
-        if not r_upper:
+    for idx, r in enumerate(regels):
+        if "ITEMS TOTAL" in r or "ITEM TOTAL" in r:
             continue
 
-        if "ITEMS TOTAL" in r_upper or "ITEM TOTAL" in r_upper:
-            continue
-
-        if "CP-7" in r_upper or "CP7" in r_upper or "1,4X1,2" in r_upper or "1.4X1.2" in r_upper:
+        if "CNPE" in r or "IBC" in r:
+            huidige_groep = "IBC"
+        elif "CP-7" in r or "CP7" in r or "1,4X1,2" in r or "1.4X1.2" in r:
             huidige_groep = "CP7"
-        if "CP-3" in r_upper or "CP3" in r_upper or "NON-STACK" in r_upper or "NON STACK" in r_upper or "1,2X1,2" in r_upper or "1.2X1.2" in r_upper:
+        elif "CP-3" in r or "CP3" in r or "NON-STACK" in r or "NON STACK" in r or "1,2X1,2" in r or "1.2X1.2" in r:
             huidige_groep = "CP3"
 
-        if re.search(r'PAL\s*/', r_upper) or ("BAG" not in r_upper and "/" in r_upper and "KG" in r_upper and not any(k in r_upper for k in ["1B/", "1D/", "1L/"])):
-            continue
+        kop_match = re.search(r'(\d+)\s*(?:PAL|PA[L1I])\s*/\s*([\d\.,]+)\s*KG', r)
+        if kop_match:
+            groepskoppen_gevonden = True
+            aantal_pal = int(kop_match.group(1))
+            kg_str = kop_match.group(2).replace(".", "").replace(",", ".")
+            try:
+                gewicht_kg = int(float(kg_str))
+            except ValueError:
+                gewicht_kg = 0
 
-        pal_match = re.search(r'(\d+)\s*(?:PAL|PA[L1I])\b', r_upper)
-        if not pal_match and "BAG" in r_upper:
-            bag_fallback = re.search(r'\b(\d{1,2})\s+\d+\s*BAG\b', r_upper)
-            if bag_fallback:
-                pal_match = bag_fallback
+            context = r
+            if idx > 0:
+                context += " " + regels[idx - 1]
+            if idx + 1 < len(regels):
+                context += " " + regels[idx + 1]
 
-        kg_match = re.search(r'([\d\.,]+)\s*KG\b', r_upper)
-
-        if pal_match:
-            aantal_pal = int(pal_match.group(1))
-            if aantal_pal <= 0 or aantal_pal > 60:
-                continue
-
-            gewicht_kg = 0
-            if kg_match:
-                kg_str = kg_match.group(1).replace(".", "").replace(",", ".")
-                try:
-                    gewicht_kg = int(float(kg_str))
-                except ValueError:
-                    gewicht_kg = 0
-
-            is_ibc = "CNPE" in r_upper
-            is_cp7 = any(code in r_upper for code in ["-NB", "-N8", "B-NB", "B-N8", "PA210"]) or (not is_ibc and huidige_groep == "CP7")
-            is_sb1 = any(code in r_upper for code in ["-SB1", "-S81", "B-SB1", "K6-SB1"])
-            is_sb5 = any(code in r_upper for code in ["-SB5", "-S85", "-SBS", "B-SB5", "K6-SB5", "B580", "B382"])
-
-            if is_ibc:
+            if "CNPE" in context or "IBC" in context or huidige_groep == "IBC":
                 res["ibc"] += aantal_pal
                 res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 1000
-                res["regels"].append(f"{aantal_pal}x IBC (CNPE)")
+                res["regels"].append(f"{aantal_pal}x IBC")
 
-            elif is_cp7:
+            elif "CP-7" in context or "CP7" in context or "-NB" in context or huidige_groep == "CP7":
                 kg_per_pal = (gewicht_kg / aantal_pal) if aantal_pal > 0 and gewicht_kg > 0 else 600
                 if kg_per_pal > 650:
                     res["cp7_750"] += aantal_pal
@@ -150,20 +145,69 @@ def verwerk_laadbon_tekst(volledige_tekst):
                     res["regels"].append(f"{aantal_pal}x CP7 600kg")
                 res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 600
 
-            elif is_sb1:
-                res["cp3_1000"] += aantal_pal
-                res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 1000
-                res["regels"].append(f"{aantal_pal}x CP3 1000kg (-SB1)")
-
-            elif is_sb5 or huidige_groep == "CP3":
+            else:
                 kg_per_pal = (gewicht_kg / aantal_pal) if aantal_pal > 0 and gewicht_kg > 0 else 500
-                if kg_per_pal > 750 and not is_sb5:
+                if kg_per_pal > 750 or "-SB1" in context:
                     res["cp3_1000"] += aantal_pal
                     res["regels"].append(f"{aantal_pal}x CP3 1000kg")
                 else:
                     res["cp3_500"] += aantal_pal
                     res["regels"].append(f"{aantal_pal}x CP3 500kg")
                 res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 500
+
+    if not groepskoppen_gevonden:
+        laatste_type = None
+        for r in regels:
+            if "ITEMS TOTAL" in r or "ITEM TOTAL" in r or "TOTAAL" in r:
+                continue
+            if "CNPE" in r:
+                laatste_type = "IBC"
+            elif any(c in r for c in ["CP-7", "CP7", "-NB", "-N8", "PA210"]):
+                laatste_type = "CP7"
+            elif any(c in r for c in ["-SB1", "-S81"]):
+                laatste_type = "CP3_1000"
+            elif any(c in r for c in ["CP-3", "CP3", "-SB5", "-S85", "B580", "B382"]):
+                laatste_type = "CP3_500"
+
+            pal_m = re.search(r'(?:^|[^\d])(\d{1,2})\s*(?:PAL|PA[L1I])\b', r)
+            kg_m = re.search(r'([\d\.,]+)\s*KG\b', r)
+            if pal_m:
+                aantal_pal = int(pal_m.group(1))
+                if aantal_pal <= 0 or aantal_pal > 60:
+                    continue
+                gewicht_kg = 0
+                if kg_m:
+                    try:
+                        gewicht_kg = int(float(kg_m.group(1).replace(".", "").replace(",", ".")))
+                    except ValueError:
+                        gewicht_kg = 0
+
+                if laatste_type == "IBC":
+                    res["ibc"] += aantal_pal
+                    res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 1000
+                    res["regels"].append(f"{aantal_pal}x IBC")
+                elif laatste_type == "CP7":
+                    kg_p = (gewicht_kg / aantal_pal) if gewicht_kg > 0 else 600
+                    if kg_p > 650:
+                        res["cp7_750"] += aantal_pal
+                        res["regels"].append(f"{aantal_pal}x CP7 750kg")
+                    else:
+                        res["cp7_600"] += aantal_pal
+                        res["regels"].append(f"{aantal_pal}x CP7 600kg")
+                    res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 600
+                elif laatste_type == "CP3_1000":
+                    res["cp3_1000"] += aantal_pal
+                    res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 1000
+                    res["regels"].append(f"{aantal_pal}x CP3 1000kg")
+                elif laatste_type == "CP3_500":
+                    kg_p = (gewicht_kg / aantal_pal) if gewicht_kg > 0 else 500
+                    if kg_p > 750 and "-SB5" not in r:
+                        res["cp3_1000"] += aantal_pal
+                        res["regels"].append(f"{aantal_pal}x CP3 1000kg")
+                    else:
+                        res["cp3_500"] += aantal_pal
+                        res["regels"].append(f"{aantal_pal}x CP3 500kg")
+                    res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 500
 
     return res
 
@@ -184,15 +228,16 @@ def lees_kaneka_bestand(bestand):
 
             tekst_1 = pytesseract.image_to_string(afbeelding, config="--psm 6")
             res_1 = verwerk_laadbon_tekst(tekst_1)
-            if res_1["regels"]:
-                return res_1
 
             afbeelding_180 = afbeelding.rotate(180, expand=True)
             tekst_2 = pytesseract.image_to_string(afbeelding_180, config="--psm 6")
             res_2 = verwerk_laadbon_tekst(tekst_2)
-            if res_2["regels"]:
-                return res_2
 
+            tot_1 = res_1["cp3_500"] + res_1["cp3_1000"] + res_1["cp7_600"] + res_1["cp7_750"] + res_1["ibc"]
+            tot_2 = res_2["cp3_500"] + res_2["cp3_1000"] + res_2["cp7_600"] + res_2["cp7_750"] + res_2["ibc"]
+
+            if tot_2 > tot_1:
+                return res_2
             return res_1
         except Exception:
             return "ONLEESBARE_FOTO"
@@ -238,8 +283,11 @@ with st.expander("📄 Laadbon importeren (PDF of Foto) — Automatisch invullen
 
     if st.session_state.pdf_data:
         d = st.session_state.pdf_data
+        gelezen_pal = d["cp3_500"] + d["cp3_1000"] + d["cp7_600"] + d["cp7_750"] + d["ibc"]
         if d["regels"]:
-            st.success(f"✅ **Bon ingelezen:** {' | '.join(d['regels'])} — **Totaal gewicht:** {d['totaal_gewicht']} kg")
+            st.success(f"✅ **Bon ingelezen ({gelezen_pal} PAL):** {' | '.join(d['regels'])} — **Totaal gewicht:** {d['totaal_gewicht']} kg")
+            if d.get("bon_totaal_pal", 0) > 0 and gelezen_pal != d["bon_totaal_pal"]:
+                st.warning(f"⚠️ Let op: op de bon staat onderaan **{d['bon_totaal_pal']} PAL**, maar er zijn **{gelezen_pal} PAL** herkend. Controleer even de ontbrekende regel.")
         else:
             st.warning("⚠️ Bestand gelezen, maar geen regels herkend. Maak een rechtere/scherpere foto of gebruik de SAP-PDF.")
         with st.expander("🔍 Bekijk uitgelezen tekst van de bon"):
