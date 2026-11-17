@@ -392,7 +392,7 @@ with col5:
         product_info["Maatwerk"]["gewicht"] = mw_kg
 auto_aslast = False
 if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0:
-    auto_aslast = st.checkbox("⚖️ Automatisch optimaliseren op aslast & oppervlakte (even CP7 altijd naast elkaar, enkele vooraan dwars)", value=(pdf_d is not None))
+    auto_aslast = st.checkbox("⚖️ Automatisch optimaliseren op aslast & oppervlakte (even CP7 altijd naast elkaar, enkele/kopstapels vooraan dwars)", value=(pdf_d is not None))
 
 as_v_cp3, as_a_cp3 = 0, 0
 as_v_cp7_600, as_a_cp7_600 = 0, 0
@@ -436,7 +436,6 @@ if not auto_aslast and (pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_t
             if pallets_mw > 0:
                 as_v_mw = st.number_input("MW VOR", min_value=0, max_value=pallets_mw, value=0, step=1, key=f"v_mw_{st.session_state.reset_id}")
                 as_a_mw = st.number_input("MW ACH", min_value=0, max_value=pallets_mw - as_v_mw, value=0, step=1, key=f"a_mw_{st.session_state.reset_id}")
-
 hoofd_cp7_600 = max(0, pallets_cp7_600_totaal - as_v_cp7_600 - as_a_cp7_600)
 if pallets_cp7_600_totaal > 0 and "CP7_600" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP7_600")
 
@@ -516,12 +515,27 @@ if auto_aslast:
     rest_750 = pallets_cp7_750_totaal
 
     vloer_600 = math.ceil(rest_600 / 2)
+    vloer_750 = math.ceil(rest_750 / 2)
+
+    if rest_750 >= 34 and rest_600 == 0 and pallets_cp3 == 0 and pallets_ibc == 0 and max_lengte == 13550:
+        kop_750 = 4 if rest_750 >= 36 else (2 if vloer_750 % 2 == 1 else 0)
+        if kop_750 > 0:
+            voeg_partij_toe_aslast("CP7_750", kop_750, "Smal (1150x1400)")
+            rest_750 -= kop_750
+            vloer_750 = math.ceil(rest_750 / 2)
+
+    if rest_600 >= 34 and rest_750 == 0 and pallets_cp3 == 0 and pallets_ibc == 0 and max_lengte == 13550:
+        kop_600 = 4 if rest_600 >= 36 else (2 if vloer_600 % 2 == 1 else 0)
+        if kop_600 > 0:
+            voeg_partij_toe_aslast("CP7_600", kop_600, "Smal (1100x1400)")
+            rest_600 -= kop_600
+            vloer_600 = math.ceil(rest_600 / 2)
+
     if vloer_600 % 2 == 1 and rest_600 > 0:
         enkele_600 = 1 if rest_600 % 2 == 1 else 2
         voeg_partij_toe_aslast("CP7_600", enkele_600, "Smal (1100x1400)")
         rest_600 -= enkele_600
 
-    vloer_750 = math.ceil(rest_750 / 2)
     if vloer_750 % 2 == 1 and rest_750 > 0:
         enkele_750 = 1 if rest_750 % 2 == 1 else 2
         voeg_partij_toe_aslast("CP7_750", enkele_750, "Smal (1150x1400)")
@@ -631,7 +645,6 @@ while idx < len(laad_lijst):
 
                 x_onder, x_boven = x_onder + 1200, x_boven + 1000
             ibc_paar_teller += 1; idx += 2; continue
-
     if x_onder <= x_boven:
         vulling_kleur = "#ff0000" if (x_onder + item["L"] > max_lengte) else item["kleur"]
         rect = patches.Rectangle((x_onder, 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85)
