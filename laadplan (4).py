@@ -339,7 +339,6 @@ with col1:
         cp3_kg_stuk = st.selectbox("Gewicht CP3:", [500, 1000], index=0 if default_cp3_kg == 500 else 1, format_func=lambda x: f"{x} kg/pal", key=f"cp3_kg_{st.session_state.reset_id}", label_visibility="collapsed")
         product_info["CP3"]["gewicht"] = cp3_kg_stuk
 
-
 with col2:
     st.markdown('<div class="custom-box" style="background-color:#2ecc71;">CP7 600kg (1400x1100)</div>', unsafe_allow_html=True)
     pallets_cp7_600_totaal = st.number_input("Aantal CP7 600", min_value=0, value=init_cp7_600, step=1, key=f"cp7_600_{st.session_state.reset_id}", label_visibility="collapsed")
@@ -367,14 +366,19 @@ with col5:
 
 auto_aslast = False
 if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0:
-    auto_aslast = st.checkbox("⚖️ Automatisch optimaliseren op aslast & oppervlakte (alleen vooraan dwars als dit past in de lengte)", value=(pdf_d is not None))
+    auto_aslast = st.checkbox("⚖️ Automatisch optimaliseren op aslast & oppervlakte (lichtste vooraan dwars indien mogelijk)", value=(pdf_d is not None))
 
 as_v_cp3, as_a_cp3 = 0, 0
 as_v_cp7_600, as_a_cp7_600 = 0, 0
 as_v_cp7_750, as_a_cp7_750 = 0, 0
 as_v_ibc, as_a_ibc = 0, 0
 as_v_mw, as_a_mw = 0, 0
-handmatig_centraal = False
+
+c_v_cp3, c_a_cp3 = False, False
+c_v_cp7_600, c_a_cp7_600 = True, True
+c_v_cp7_750, c_a_cp7_750 = True, True
+c_v_ibc, c_a_ibc = False, False
+c_v_mw, c_a_mw = False, False
 
 richting_v_cp7_600 = "Lang (1400x1100)"
 richting_a_cp7_600 = "Lang (1400x1100)"
@@ -382,44 +386,52 @@ richting_v_cp7_750 = "Lang (1400x1150)"
 richting_a_cp7_750 = "Lang (1400x1150)"
 
 if not auto_aslast and (pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0):
-    with st.expander("⚖️ Klik hier voor handmatige plaatsing vooraan (VOR) / achteraan (ACH)"):
-        plaatsing_keuze = st.radio(
-            "Hoe wil je de pallets onder VOR / ACH plaatsen?",
-            ["Naast elkaar (2 rijen)", "Centraal in het midden"],
-            horizontal=True,
-            key=f"pl_keuze_{st.session_state.reset_id}"
-        )
-        handmatig_centraal = (plaatsing_keuze == "Centraal in het midden")
-
+    with st.expander("⚖️ Klik hier voor handmatige plaatsing vooraan (VOR) / achteraan (ACH) per artikel"):
         v_col1, v_col2, v_col3, v_col4, v_col5 = st.columns(5)
         with v_col1:
             if pallets_cp3 > 0:
                 as_v_cp3 = st.number_input("CP3 VOR", min_value=0, max_value=pallets_cp3, value=0, step=1, key=f"v_cp3_{st.session_state.reset_id}")
+                if as_v_cp3 > 0:
+                    c_v_cp3 = (st.radio("CP3 VOR plaatsing:", ["Naast elkaar", "Centraal"], key=f"cv_cp3_{st.session_state.reset_id}") == "Centraal")
                 as_a_cp3 = st.number_input("CP3 ACH", min_value=0, max_value=pallets_cp3 - as_v_cp3, value=0, step=1, key=f"a_cp3_{st.session_state.reset_id}")
+                if as_a_cp3 > 0:
+                    c_a_cp3 = (st.radio("CP3 ACH plaatsing:", ["Naast elkaar", "Centraal"], key=f"ca_cp3_{st.session_state.reset_id}") == "Centraal")
         with v_col2:
             if pallets_cp7_600_totaal > 0:
                 as_v_cp7_600 = st.number_input("CP7 600 VOR", min_value=0, max_value=pallets_cp7_600_totaal, value=0, step=1, key=f"v_cp7_600_{st.session_state.reset_id}")
                 if as_v_cp7_600 > 0:
                     richting_v_cp7_600 = st.radio("Richting VOR (600):", ["Lang (1400x1100)", "Smal (1100x1400)"], key=f"r_v_cp7_600_{st.session_state.reset_id}")
+                    c_v_cp7_600 = (st.radio("CP7 600 VOR plaatsing:", ["Centraal", "Naast elkaar"], key=f"cv_600_{st.session_state.reset_id}") == "Centraal")
                 as_a_cp7_600 = st.number_input("CP7 600 ACH", min_value=0, max_value=pallets_cp7_600_totaal - as_v_cp7_600, value=0, step=1, key=f"a_cp7_600_{st.session_state.reset_id}")
                 if as_a_cp7_600 > 0:
                     richting_a_cp7_600 = st.radio("Richting ACH (600):", ["Lang (1400x1100)", "Smal (1100x1400)"], key=f"r_a_cp7_600_{st.session_state.reset_id}")
+                    c_a_cp7_600 = (st.radio("CP7 600 ACH plaatsing:", ["Centraal", "Naast elkaar"], key=f"ca_600_{st.session_state.reset_id}") == "Centraal")
         with v_col3:
             if pallets_cp7_750_totaal > 0:
                 as_v_cp7_750 = st.number_input("CP7 750 VOR", min_value=0, max_value=pallets_cp7_750_totaal, value=0, step=1, key=f"v_cp7_750_{st.session_state.reset_id}")
                 if as_v_cp7_750 > 0:
                     richting_v_cp7_750 = st.radio("Richting VOR (750):", ["Lang (1400x1150)", "Smal (1150x1400)"], key=f"r_v_cp7_750_{st.session_state.reset_id}")
+                    c_v_cp7_750 = (st.radio("CP7 750 VOR plaatsing:", ["Centraal", "Naast elkaar"], key=f"cv_750_{st.session_state.reset_id}") == "Centraal")
                 as_a_cp7_750 = st.number_input("CP7 750 ACH", min_value=0, max_value=pallets_cp7_750_totaal - as_v_cp7_750, value=0, step=1, key=f"a_cp7_750_{st.session_state.reset_id}")
                 if as_a_cp7_750 > 0:
                     richting_a_cp7_750 = st.radio("Richting ACH (750):", ["Lang (1400x1150)", "Smal (1150x1400)"], key=f"r_a_cp7_750_{st.session_state.reset_id}")
+                    c_a_cp7_750 = (st.radio("CP7 750 ACH plaatsing:", ["Centraal", "Naast elkaar"], key=f"ca_750_{st.session_state.reset_id}") == "Centraal")
         with v_col4:
             if pallets_ibc > 0:
                 as_v_ibc = st.number_input("IBC VOR", min_value=0, max_value=pallets_ibc, value=0, step=1, key=f"v_ibc_{st.session_state.reset_id}")
+                if as_v_ibc > 0:
+                    c_v_ibc = (st.radio("IBC VOR plaatsing:", ["Naast elkaar", "Centraal"], key=f"cv_ibc_{st.session_state.reset_id}") == "Centraal")
                 as_a_ibc = st.number_input("IBC ACH", min_value=0, max_value=pallets_ibc - as_v_ibc, value=0, step=1, key=f"a_ibc_{st.session_state.reset_id}")
+                if as_a_ibc > 0:
+                    c_a_ibc = (st.radio("IBC ACH plaatsing:", ["Naast elkaar", "Centraal"], key=f"ca_ibc_{st.session_state.reset_id}") == "Centraal")
         with v_col5:
             if pallets_mw > 0:
                 as_v_mw = st.number_input("MW VOR", min_value=0, max_value=pallets_mw, value=0, step=1, key=f"v_mw_{st.session_state.reset_id}")
+                if as_v_mw > 0:
+                    c_v_mw = (st.radio("MW VOR plaatsing:", ["Naast elkaar", "Centraal"], key=f"cv_mw_{st.session_state.reset_id}") == "Centraal")
                 as_a_mw = st.number_input("MW ACH", min_value=0, max_value=pallets_mw - as_v_mw, value=0, step=1, key=f"a_mw_{st.session_state.reset_id}")
+                if as_a_mw > 0:
+                    c_a_mw = (st.radio("MW ACH plaatsing:", ["Naast elkaar", "Centraal"], key=f"ca_mw_{st.session_state.reset_id}") == "Centraal")
 hoofd_cp7_600 = max(0, pallets_cp7_600_totaal - as_v_cp7_600 - as_a_cp7_600)
 if pallets_cp7_600_totaal > 0 and "CP7_600" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP7_600")
 
@@ -537,11 +549,19 @@ if auto_aslast:
     voeg_partij_toe("CP7_750", rest_750)
     voeg_partij_toe("CP3", cp3_licht_achter, override_kg=500)
 else:
-    voeg_partij_toe_aslast("CP3", as_v_cp3, "Lang", centraal=handmatig_centraal)
-    voeg_partij_toe_aslast("CP7_600", as_v_cp7_600, richting_v_cp7_600, centraal=handmatig_centraal)
-    voeg_partij_toe_aslast("CP7_750", as_v_cp7_750, richting_v_cp7_750, centraal=handmatig_centraal)
-    voeg_partij_toe_aslast("IBC", as_v_ibc, "Lang", centraal=handmatig_centraal)
-    voeg_partij_toe_aslast("Maatwerk", as_v_mw, "Lang", centraal=handmatig_centraal)
+    voor_items = [
+        ("CP7_600", as_v_cp7_600, richting_v_cp7_600, c_v_cp7_600),
+        ("CP7_750", as_v_cp7_750, richting_v_cp7_750, c_v_cp7_750),
+        ("CP3", as_v_cp3, "Lang", c_v_cp3),
+        ("IBC", as_v_ibc, "Lang", c_v_ibc),
+        ("Maatwerk", as_v_mw, "Lang", c_v_mw),
+    ]
+    for art, aantal, richt, is_centr in voor_items:
+        if aantal > 0 and is_centr:
+            voeg_partij_toe_aslast(art, aantal, richt, centraal=True)
+    for art, aantal, richt, is_centr in voor_items:
+        if aantal > 0 and not is_centr:
+            voeg_partij_toe_aslast(art, aantal, richt, centraal=False)
 
     vloer_h_600 = math.ceil(actuele_aantallen["CP7_600"] / 2)
     vloer_h_750 = math.ceil(actuele_aantallen["CP7_750"] / 2)
@@ -568,11 +588,19 @@ else:
         elif art_naam in actuele_aantallen:
             voeg_partij_toe(art_naam, actuele_aantallen[art_naam])
 
-    voeg_partij_toe_aslast("CP3", as_a_cp3, "Lang", centraal=handmatig_centraal)
-    voeg_partij_toe_aslast("CP7_600", as_a_cp7_600, richting_a_cp7_600, centraal=handmatig_centraal)
-    voeg_partij_toe_aslast("CP7_750", as_a_cp7_750, richting_a_cp7_750, centraal=handmatig_centraal)
-    voeg_partij_toe_aslast("IBC", as_a_ibc, "Lang", centraal=handmatig_centraal)
-    voeg_partij_toe_aslast("Maatwerk", as_a_mw, "Lang", centraal=handmatig_centraal)
+    achter_items = [
+        ("CP3", as_a_cp3, "Lang", c_a_cp3),
+        ("CP7_600", as_a_cp7_600, richting_a_cp7_600, c_a_cp7_600),
+        ("CP7_750", as_a_cp7_750, richting_a_cp7_750, c_a_cp7_750),
+        ("IBC", as_a_ibc, "Lang", c_a_ibc),
+        ("Maatwerk", as_a_mw, "Lang", c_a_mw),
+    ]
+    for art, aantal, richt, is_centr in achter_items:
+        if aantal > 0 and not is_centr:
+            voeg_partij_toe_aslast(art, aantal, richt, centraal=False)
+    for art, aantal, richt, is_centr in achter_items:
+        if aantal > 0 and is_centr:
+            voeg_partij_toe_aslast(art, aantal, richt, centraal=True)
 fig, ax = plt.subplots(figsize=(15, 4.1))
 ax.set_xlim(0, max_lengte)
 ax.set_ylim(-650 if max_lengte == 13550 else -200, max_breedte + 180)
@@ -695,6 +723,7 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     else: st.error(f"❌ Past NIET! {abs(restruimte)} mm tekort — **Totaal gewicht lading:** {totaal_lading_kg} kg")
 
     st.pyplot(fig, use_container_width=True)
+
     if max_lengte == 13550 and totaal_lading_kg > 0:
         trekas_leeg, schotel_leeg, tridem_leeg = 2800, 2000, 5200
         afstand_assen = 10200 - 1600
