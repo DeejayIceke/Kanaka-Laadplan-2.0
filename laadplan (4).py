@@ -101,11 +101,11 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
             continue
         if "CNPE" in r or "IBC" in r:
             laatste_type = "IBC"
-        elif any(c in r for c in ["CP-7", "CP7", "-NB", "-N8", "PA210", "1,4X1,2"]):
+        elif any(c in r for c in ("CP-7", "CP7", "-NB", "-N8", "PA210", "1,4X1,2")):
             laatste_type = "CP7"
-        elif any(c in r for c in ["-SB1", "-S81"]):
+        elif any(c in r for c in ("-SB1", "-S81")):
             laatste_type = "CP3_1000"
-        elif any(c in r for c in ["CP-3", "CP3", "-SB5", "-S85", "B580", "B382", "1,2X1,2"]):
+        elif any(c in r for c in ("CP-3", "CP3", "-SB5", "-S85", "B580", "B382", "1,2X1,2")):
             laatste_type = "CP3_500"
 
         if re.search(r'PAL\s*/', r):
@@ -191,8 +191,8 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
                 kop_res["regels"].append(f"{aantal_pal}x CP7 600kg")
             kop_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 600
         else:
-            is_sb5 = any(c in context for c in ["-SB5", "-S85", "-SBS"])
-            is_sb1 = any(c in context for c in ["-SB1", "-S81"])
+            is_sb5 = any(c in context for c in ("-SB5", "-S85", "-SBS"))
+            is_sb1 = any(c in context for c in ("-SB1", "-S81"))
             if gewicht_kg > 0:
                 verwacht = 500 if is_sb5 else 1000
                 if abs((gewicht_kg / max(1, aantal_pal)) - verwacht) > 150:
@@ -231,11 +231,11 @@ def lees_kaneka_bestand(bestand):
                 afbeelding = afbeelding.rotate(-90, expand=True)
 
             grijs = ImageOps.autocontrast(afbeelding.convert("L"))
-            kandidaten = [
+            kandidaten = (
                 pytesseract.image_to_string(afbeelding, config="--psm 6"),
                 pytesseract.image_to_string(grijs, config="--psm 6"),
                 pytesseract.image_to_string(afbeelding.rotate(180, expand=True), config="--psm 6"),
-            ]
+            )
             beste_res, beste_pal = None, -1
             for t in kandidaten:
                 r = verwerk_laadbon_tekst(t, is_foto=True)
@@ -265,7 +265,7 @@ if "laatste_pdf_naam" not in st.session_state: st.session_state.laatste_pdf_naam
 with st.expander("📄 Laadbon importeren (PDF of Foto) — Automatisch invullen & aslast optimaliseren", expanded=True):
     geupload_bestand = st.file_uploader(
         "Upload hier de Kaneka Loading List (digitale PDF of foto JPG/PNG/HEIC):",
-        type=["pdf", "jpg", "jpeg", "png", "heic", "heif"],
+        type=("pdf", "jpg", "jpeg", "png", "heic", "heif"),
         key=f"pdf_up_{st.session_state.reset_id}"
     )
     if geupload_bestand is not None and geupload_bestand.name != st.session_state.laatste_pdf_naam:
@@ -299,7 +299,7 @@ with st.expander("📄 Laadbon importeren (PDF of Foto) — Automatisch invullen
 st.write("### 1. Kies container / oplegger:")
 container_type = st.selectbox(
     "1. Kies container:", 
-    ["45ft Container / Bache (13550 x 2426 mm)", "40ft Container (12030 x 2350 mm)", "20ft Container (5898 x 2350 mm)"],
+    ("45ft Container / Bache (13550 x 2426 mm)", "40ft Container (12030 x 2350 mm)", "20ft Container (5898 x 2350 mm)"),
     label_visibility="collapsed"
 )
 
@@ -332,16 +332,14 @@ with col_wis:
 col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
-with col1:
     st.markdown('<div class="custom-box" style="background-color:#3498db;">CP3 (1150x1150)</div>', unsafe_allow_html=True)
     in_cp3 = st.number_input("Aantal CP3", min_value=0, value=init_cp3, step=1, key=f"cp3_{st.session_state.reset_id}", label_visibility="collapsed")
     pallets_cp3 = int(in_cp3) if in_cp3 is not None else 0
     if pallets_cp3 > 0:
         if "CP3" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP3")
         default_cp3_kg = 1000 if (pdf_d and pdf_d["cp3_1000"] > pdf_d["cp3_500"]) else 500
-        cp3_kg_stuk = st.selectbox("Gewicht CP3:", list((500, 1000)), index=0 if default_cp3_kg == 500 else 1, format_func=lambda x: f"{x} kg/pal", key=f"cp3_kg_{st.session_state.reset_id}", label_visibility="collapsed")
+        cp3_kg_stuk = st.selectbox("Gewicht CP3:", (500, 1000), index=0 if default_cp3_kg == 500 else 1, format_func=lambda x: f"{x} kg/pal", key=f"cp3_kg_{st.session_state.reset_id}", label_visibility="collapsed")
         product_info["CP3"]["gewicht"] = cp3_kg_stuk
-
 
 with col2:
     st.markdown('<div class="custom-box" style="background-color:#2ecc71;">CP7 600kg (1400x1100)</div>', unsafe_allow_html=True)
@@ -415,46 +413,46 @@ if handmatig_modus and (pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_t
             if pallets_cp3 > 0:
                 as_v_cp3 = st.number_input("CP3 VOR", min_value=0, max_value=pallets_cp3, value=0, step=1, key=f"v_cp3_{st.session_state.reset_id}") or 0
                 if as_v_cp3 > 0:
-                    c_v_cp3 = (st.radio("CP3 VOR plaatsing:", ["Naast elkaar", "Centraal"], key=f"cv_cp3_{st.session_state.reset_id}") == "Centraal")
+                    c_v_cp3 = (st.radio("CP3 VOR plaatsing:", ("Naast elkaar", "Centraal"), key=f"cv_cp3_{st.session_state.reset_id}") == "Centraal")
                 as_a_cp3 = st.number_input("CP3 ACH", min_value=0, max_value=pallets_cp3 - as_v_cp3, value=0, step=1, key=f"a_cp3_{st.session_state.reset_id}") or 0
                 if as_a_cp3 > 0:
-                    c_a_cp3 = (st.radio("CP3 ACH plaatsing:", ["Naast elkaar", "Centraal"], key=f"ca_cp3_{st.session_state.reset_id}") == "Centraal")
+                    c_a_cp3 = (st.radio("CP3 ACH plaatsing:", ("Naast elkaar", "Centraal"), key=f"ca_cp3_{st.session_state.reset_id}") == "Centraal")
         with v_col2:
             if pallets_cp7_600_totaal > 0:
                 as_v_cp7_600 = st.number_input("CP7 600 VOR", min_value=0, max_value=pallets_cp7_600_totaal, value=0, step=1, key=f"v_cp7_600_{st.session_state.reset_id}") or 0
                 if as_v_cp7_600 > 0:
-                    richting_v_cp7_600 = st.radio("Richting VOR (600):", ["Lang (1400x1100)", "Smal (1100x1400)"], key=f"r_v_cp7_600_{st.session_state.reset_id}")
-                    c_v_cp7_600 = (st.radio("CP7 600 VOR plaatsing:", ["Centraal", "Naast elkaar"], key=f"cv_600_{st.session_state.reset_id}") == "Centraal")
+                    richting_v_cp7_600 = st.radio("Richting VOR (600):", ("Lang (1400x1100)", "Smal (1100x1400)"), key=f"r_v_cp7_600_{st.session_state.reset_id}")
+                    c_v_cp7_600 = (st.radio("CP7 600 VOR plaatsing:", ("Centraal", "Naast elkaar"), key=f"cv_600_{st.session_state.reset_id}") == "Centraal")
                 as_a_cp7_600 = st.number_input("CP7 600 ACH", min_value=0, max_value=pallets_cp7_600_totaal - as_v_cp7_600, value=0, step=1, key=f"a_cp7_600_{st.session_state.reset_id}") or 0
                 if as_a_cp7_600 > 0:
-                    richting_a_cp7_600 = st.radio("Richting ACH (600):", ["Lang (1400x1100)", "Smal (1100x1400)"], key=f"r_a_cp7_600_{st.session_state.reset_id}")
-                    c_a_cp7_600 = (st.radio("CP7 600 ACH plaatsing:", ["Centraal", "Naast elkaar"], key=f"ca_600_{st.session_state.reset_id}") == "Centraal")
+                    richting_a_cp7_600 = st.radio("Richting ACH (600):", ("Lang (1400x1100)", "Smal (1100x1400)"), key=f"r_a_cp7_600_{st.session_state.reset_id}")
+                    c_a_cp7_600 = (st.radio("CP7 600 ACH plaatsing:", ("Centraal", "Naast elkaar"), key=f"ca_600_{st.session_state.reset_id}") == "Centraal")
         with v_col3:
             if pallets_cp7_750_totaal > 0:
                 as_v_cp7_750 = st.number_input("CP7 750 VOR", min_value=0, max_value=pallets_cp7_750_totaal, value=0, step=1, key=f"v_cp7_750_{st.session_state.reset_id}") or 0
                 if as_v_cp7_750 > 0:
-                    richting_v_cp7_750 = st.radio("Richting VOR (750):", ["Lang (1400x1150)", "Smal (1150x1400)"], key=f"r_v_cp7_750_{st.session_state.reset_id}")
-                    c_v_cp7_750 = (st.radio("CP7 750 VOR plaatsing:", ["Centraal", "Naast elkaar"], key=f"cv_750_{st.session_state.reset_id}") == "Centraal")
+                    richting_v_cp7_750 = st.radio("Richting VOR (750):", ("Lang (1400x1150)", "Smal (1150x1400)"), key=f"r_v_cp7_750_{st.session_state.reset_id}")
+                    c_v_cp7_750 = (st.radio("CP7 750 VOR plaatsing:", ("Centraal", "Naast elkaar"), key=f"cv_750_{st.session_state.reset_id}") == "Centraal")
                 as_a_cp7_750 = st.number_input("CP7 750 ACH", min_value=0, max_value=pallets_cp7_750_totaal - as_v_cp7_750, value=0, step=1, key=f"a_cp7_750_{st.session_state.reset_id}") or 0
                 if as_a_cp7_750 > 0:
-                    richting_a_cp7_750 = st.radio("Richting ACH (750):", ["Lang (1400x1150)", "Smal (1150x1400)"], key=f"r_a_cp7_750_{st.session_state.reset_id}")
-                    c_a_cp7_750 = (st.radio("CP7 750 ACH plaatsing:", ["Centraal", "Naast elkaar"], key=f"ca_750_{st.session_state.reset_id}") == "Centraal")
+                    richting_a_cp7_750 = st.radio("Richting ACH (750):", ("Lang (1400x1150)", "Smal (1150x1400)"), key=f"r_a_cp7_750_{st.session_state.reset_id}")
+                    c_a_cp7_750 = (st.radio("CP7 750 ACH plaatsing:", ("Centraal", "Naast elkaar"), key=f"ca_750_{st.session_state.reset_id}") == "Centraal")
         with v_col4:
             if pallets_ibc > 0:
                 as_v_ibc = st.number_input("IBC VOR", min_value=0, max_value=pallets_ibc, value=0, step=1, key=f"v_ibc_{st.session_state.reset_id}") or 0
                 if as_v_ibc > 0:
-                    c_v_ibc = (st.radio("IBC VOR plaatsing:", ["Naast elkaar", "Centraal"], key=f"cv_ibc_{st.session_state.reset_id}") == "Centraal")
+                    c_v_ibc = (st.radio("IBC VOR plaatsing:", ("Naast elkaar", "Centraal"), key=f"cv_ibc_{st.session_state.reset_id}") == "Centraal")
                 as_a_ibc = st.number_input("IBC ACH", min_value=0, max_value=pallets_ibc - as_v_ibc, value=0, step=1, key=f"a_ibc_{st.session_state.reset_id}") or 0
                 if as_a_ibc > 0:
-                    c_a_ibc = (st.radio("IBC ACH plaatsing:", ["Naast elkaar", "Centraal"], key=f"ca_ibc_{st.session_state.reset_id}") == "Centraal")
+                    c_a_ibc = (st.radio("IBC ACH plaatsing:", ("Naast elkaar", "Centraal"), key=f"ca_ibc_{st.session_state.reset_id}") == "Centraal")
         with v_col5:
             if pallets_mw > 0:
                 as_v_mw = st.number_input("MW VOR", min_value=0, max_value=pallets_mw, value=0, step=1, key=f"v_mw_{st.session_state.reset_id}") or 0
                 if as_v_mw > 0:
-                    c_v_mw = (st.radio("MW VOR plaatsing:", ["Naast elkaar", "Centraal"], key=f"cv_mw_{st.session_state.reset_id}") == "Centraal")
+                    c_v_mw = (st.radio("MW VOR plaatsing:", ("Naast elkaar", "Centraal"), key=f"cv_mw_{st.session_state.reset_id}") == "Centraal")
                 as_a_mw = st.number_input("MW ACH", min_value=0, max_value=pallets_mw - as_v_mw, value=0, step=1, key=f"a_mw_{st.session_state.reset_id}") or 0
                 if as_a_mw > 0:
-                    c_a_mw = (st.radio("MW ACH plaatsing:", ["Naast elkaar", "Centraal"], key=f"ca_mw_{st.session_state.reset_id}") == "Centraal")
+                    c_a_mw = (st.radio("MW ACH plaatsing:", ("Naast elkaar", "Centraal"), key=f"ca_mw_{st.session_state.reset_id}") == "Centraal")
 hoofd_cp7_600 = max(0, pallets_cp7_600_totaal - as_v_cp7_600 - as_a_cp7_600)
 if pallets_cp7_600_totaal > 0 and "CP7_600" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP7_600")
 
@@ -566,13 +564,13 @@ if auto_aslast:
     voeg_partij_toe("Maatwerk", pallets_mw)
     voeg_partij_toe("IBC", pallets_ibc)
 else:
-    voor_items = [
+    voor_items = (
         ("CP7_600", as_v_cp7_600, richting_v_cp7_600, c_v_cp7_600),
         ("CP7_750", as_v_cp7_750, richting_v_cp7_750, c_v_cp7_750),
         ("CP3", as_v_cp3, "Lang", c_v_cp3),
         ("IBC", as_v_ibc, "Lang", c_v_ibc),
         ("Maatwerk", as_v_mw, "Lang", c_v_mw),
-    ]
+    )
     for art, aantal, richt, is_centr in voor_items:
         if aantal > 0 and is_centr:
             voeg_partij_toe_aslast(art, aantal, richt, centraal=True)
@@ -602,13 +600,13 @@ else:
     voeg_partij_toe("Maatwerk", actuele_aantallen["Maatwerk"])
     voeg_partij_toe("IBC", actuele_aantallen["IBC"])
 
-    achter_items = [
+    achter_items = (
         ("CP3", as_a_cp3, "Lang", c_a_cp3),
         ("CP7_600", as_a_cp7_600, richting_a_cp7_600, c_a_cp7_600),
         ("CP7_750", as_a_cp7_750, richting_a_cp7_750, c_a_cp7_750),
         ("IBC", as_a_ibc, "Lang", c_a_ibc),
         ("Maatwerk", as_a_mw, "Lang", c_a_mw),
-    ]
+    )
     for art, aantal, richt, is_centr in achter_items:
         if aantal > 0 and not is_centr:
             voeg_partij_toe_aslast(art, aantal, richt, centraal=False)
@@ -737,7 +735,6 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     else: st.error(f"❌ Past NIET! {abs(restruimte)} mm tekort — **Totaal gewicht lading:** {totaal_lading_kg} kg")
 
     st.pyplot(fig, use_container_width=True)
-
     if max_lengte == 13550 and totaal_lading_kg > 0:
         trekas_leeg, schotel_leeg, tridem_leeg = 2800, 2000, 5200
         afstand_assen = 10200 - 1600
