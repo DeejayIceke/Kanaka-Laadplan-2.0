@@ -3,6 +3,7 @@ import streamlit.components.v1 as components
 import math
 import io
 import re
+import base64
 import importlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -62,6 +63,17 @@ st.markdown("""
             margin: 0.25rem 0 0 0;
             font-weight: 500;
             letter-spacing: 0.3px;
+        }
+        @media (min-width: 951px) {
+            .alleen-mobiel {
+                display: none !important;
+            }
+        }
+        @media (max-width: 950px) {
+            div[data-testid="stExpander"]:has(div[data-testid="stFileUploader"]),
+            div[data-testid="stDownloadButton"] {
+                display: none !important;
+            }
         }
         @media (orientation: landscape) and (max-width: 950px) {
             .block-container {
@@ -762,7 +774,48 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     st.write("💡 **Legenda:** Blauw=CP3 | Groen=CP7 600kg | Rood=CP7 750kg | Geel=IBC | Grijs=Maatwerk | FELROOD=Past Niet")
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=200, bbox_inches="tight")
-    st.download_button(label="📸 Download Laadplan (Afbeelding)", data=buf.getvalue(), file_name="fons_laadplan.png", mime="image/png")
+    png_bytes = buf.getvalue()
+    b64_img = base64.b64encode(png_bytes).decode()
+
+    st.download_button(label="📸 Download Laadplan (Afbeelding)", data=png_bytes, file_name="fons_laadplan.png", mime="image/png")
+
+    st.markdown(f"""
+        <div class="alleen-mobiel" style="margin-top:0.5rem;">
+            <button onclick="window.openFonsFullscreen('{b64_img}')" style="
+                width:100%; padding:0.8rem 1rem; border-radius:0.6rem; border:none;
+                background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+                color:white; font-weight:700; font-size:15px; cursor:pointer;
+                box-shadow:0 3px 10px rgba(0,0,0,0.25);">
+                🔍 Groot scherm (90° gedraaid)
+            </button>
+        </div>
+    """, unsafe_allow_html=True)
+
+    components.html("""
+    <script>
+    const pDoc = window.parent.document;
+    window.parent.openFonsFullscreen = function(b64) {
+        let oud = pDoc.getElementById('fons-fs-overlay');
+        if (oud) oud.remove();
+        let overlay = pDoc.createElement('div');
+        overlay.id = 'fons-fs-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:#0f172a;z-index:999999;display:flex;align-items:center;justify-content:center;overflow:hidden;';
+        overlay.onclick = function() { overlay.remove(); };
+
+        let hint = pDoc.createElement('div');
+        hint.innerText = '👆 Tik op de tekening om terug te keren';
+        hint.style.cssText = 'position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.85);color:#f8fafc;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid #38bdf8;z-index:1000000;pointer-events:none;';
+
+        let img = pDoc.createElement('img');
+        img.src = 'data:image/png;base64,' + b64;
+        img.style.cssText = 'width:92vh;height:auto;max-height:92vw;transform:rotate(90deg);object-fit:contain;background:white;border-radius:8px;padding:6px;box-shadow:0 8px 30px rgba(0,0,0,0.6);cursor:pointer;';
+
+        overlay.appendChild(img);
+        overlay.appendChild(hint);
+        pDoc.body.appendChild(overlay);
+    };
+    </script>
+    """, height=0, width=0)
 else:
     st.info("Container is leeg. Upload een PDF/foto-laadbon of gebruik de + en - knoppen om te beginnen.")
 
