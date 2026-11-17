@@ -675,18 +675,22 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     st.pyplot(fig, use_container_width=True)
 
     if max_lengte == 13550 and totaal_lading_kg > 0:
-        trekas_leeg_totaal = 6400
-        tridem_leeg_totaal = 5000
+        # Realistische verdeling 4x2 trekker + 3-assige huifoplegger (7.200 kg leeg):
+        # Schotel (kingpin op 1,60 m) geeft ~81% door aan de trekas en ~19% aan de stuuras vooraan.
+        trekas_leeg = 3400
+        schotel_leeg = 2000
+        tridem_leeg = 5200
         afstand_assen = 10200 - 1600
 
-        aandeel_tridem = max(0.0, min(1.2, (zwaartepunt_mm - 1600) / afstand_assen))
-        aandeel_trekas = 1.0 - aandeel_tridem
+        aandeel_tridem = max(0.0, min(1.25, (zwaartepunt_mm - 1600) / afstand_assen))
+        aandeel_schotel = 1.0 - aandeel_tridem
 
-        belasting_trekas = round(trekas_leeg_totaal + (totaal_lading_kg * aandeel_trekas))
-        belasting_tridem = round(tridem_leeg_totaal + (totaal_lading_kg * aandeel_tridem))
+        schotel_druk = schotel_leeg + (totaal_lading_kg * aandeel_schotel)
+        belasting_trekas = round(trekas_leeg + (schotel_druk * 0.81))
+        belasting_tridem = round(tridem_leeg + (totaal_lading_kg * aandeel_tridem))
 
         ac1, ac2, ac3 = st.columns(3)
-        ac1.metric("⚖️ Zwaartepunt lading", f"{zwaartepunt_mm / 1000:.2f} m", "Ideaal: 6,20 m – 7,40 m vanaf kopschot")
+        ac1.metric("⚖️ Zwaartepunt lading", f"{zwaartepunt_mm / 1000:.2f} m", "Ideaal: 6,20 m – 7,60 m vanaf kopschot")
         ac2.metric(
             "🚛 Trekas trekker (max 11.500 kg)",
             f"{belasting_trekas} kg",
