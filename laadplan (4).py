@@ -334,7 +334,7 @@ max_breedte = 2426 if "45ft" in container_type else 2350
 product_info = {
     "CP3": {"lengte": 1150, "breedte": 1150, "kleur": "#3498db", "stapelbaar": False, "label": "CP3", "gewicht": 500},
     "CP7_600": {"lengte": 1400, "breedte": 1100, "kleur": "#2ecc71", "stapelbaar": True, "label": "CP7 600", "gewicht": 600},
-    "CP7_750": {"lengte": 1400, "breedte": 1200, "kleur": "#e74c3c", "stapelbaar": True, "label": "CP7 750", "gewicht": 750},
+    "CP7_750": {"lengte": 1400, "breedte": 1150, "kleur": "#e74c3c", "stapelbaar": True, "label": "CP7 750", "gewicht": 750},
     "IBC": {"lengte": 1000, "breedte": 1200, "kleur": "#f1c40f", "stapelbaar": False, "label": "IBC", "gewicht": 1000},
     "Maatwerk": {"lengte": 1000, "breedte": 1000, "kleur": "#7f8c8d", "stapelbaar": False, "label": "Maatwerk", "gewicht": 500}
 }
@@ -371,7 +371,7 @@ with col2:
     pallets_cp7_600_totaal = st.number_input("Aantal CP7 600", min_value=0, value=init_cp7_600, step=1, key=f"cp7_600_{st.session_state.reset_id}", label_visibility="collapsed")
 
 with col3:
-    st.markdown('<div class="custom-box" style="background-color:#e74c3c;">CP7 750kg (1400x1200)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="custom-box" style="background-color:#e74c3c;">CP7 750kg (1400x1150)</div>', unsafe_allow_html=True)
     pallets_cp7_750_totaal = st.number_input("Aantal CP7 750", min_value=0, value=init_cp7_750, step=1, key=f"cp7_750_{st.session_state.reset_id}", label_visibility="collapsed")
 
 with col4:
@@ -402,8 +402,8 @@ as_v_mw, as_a_mw = 0, 0
 
 richting_v_cp7_600 = "Lang (1400x1100)"
 richting_a_cp7_600 = "Lang (1400x1100)"
-richting_v_cp7_750 = "Lang (1400x1200)"
-richting_a_cp7_750 = "Lang (1400x1200)"
+richting_v_cp7_750 = "Lang (1400x1150)"
+richting_a_cp7_750 = "Lang (1400x1150)"
 
 if not auto_aslast and (pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0):
     with st.expander("⚖️ Klik hier voor handmatige aslast-regelingen (Midden vooraan/achteraan)"):
@@ -424,10 +424,10 @@ if not auto_aslast and (pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_t
             if pallets_cp7_750_totaal > 0:
                 as_v_cp7_750 = st.number_input("CP7 750 VOR", min_value=0, max_value=pallets_cp7_750_totaal, value=0, step=1, key=f"v_cp7_750_{st.session_state.reset_id}")
                 if as_v_cp7_750 > 0:
-                    richting_v_cp7_750 = st.radio("Richting VOR (750):", ["Lang (1400x1200)", "Smal (1200x1400)"], key=f"r_v_cp7_750_{st.session_state.reset_id}")
+                    richting_v_cp7_750 = st.radio("Richting VOR (750):", ["Lang (1400x1150)", "Smal (1150x1400)"], key=f"r_v_cp7_750_{st.session_state.reset_id}")
                 as_a_cp7_750 = st.number_input("CP7 750 ACH", min_value=0, max_value=pallets_cp7_750_totaal - as_v_cp7_750, value=0, step=1, key=f"a_cp7_750_{st.session_state.reset_id}")
                 if as_a_cp7_750 > 0:
-                    richting_a_cp7_750 = st.radio("Richting ACH (750):", ["Lang (1400x1200)", "Smal (1200x1400)"], key=f"r_a_cp7_750_{st.session_state.reset_id}")
+                    richting_a_cp7_750 = st.radio("Richting ACH (750):", ["Lang (1400x1150)", "Smal (1150x1400)"], key=f"r_a_cp7_750_{st.session_state.reset_id}")
         with v_col4:
             if pallets_ibc > 0:
                 as_v_ibc = st.number_input("IBC VOR", min_value=0, max_value=pallets_ibc, value=0, step=1, key=f"v_ibc_{st.session_state.reset_id}")
@@ -524,7 +524,7 @@ if auto_aslast:
     vloer_750 = math.ceil(rest_750 / 2)
     if vloer_750 % 2 == 1 and rest_750 > 0:
         enkele_750 = 1 if rest_750 % 2 == 1 else 2
-        voeg_partij_toe_aslast("CP7_750", enkele_750, "Smal (1200x1400)")
+        voeg_partij_toe_aslast("CP7_750", enkele_750, "Smal (1150x1400)")
         rest_750 -= enkele_750
 
     heeft_pdf_cp3 = pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3)
@@ -675,9 +675,6 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     st.pyplot(fig, use_container_width=True)
 
     if max_lengte == 13550 and totaal_lading_kg > 0:
-        # Realistische verdeling 4x2 trekker (~7.800 kg leeg: 5.000 vooras + 2.800 trekas)
-        # + 3-assige schuifzeiloplegger (~7.200 kg leeg: 2.000 schotel + 5.200 tridem)
-        # Van de totale schoteldruk gaat ~72% naar de trekas en ~28% naar de stuuras vooraan.
         trekas_leeg = 2800
         schotel_leeg = 2000
         tridem_leeg = 5200
