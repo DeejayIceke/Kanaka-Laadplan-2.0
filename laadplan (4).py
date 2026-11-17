@@ -336,7 +336,7 @@ with col1:
     if pallets_cp3 > 0:
         if "CP3" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP3")
         default_cp3_kg = 1000 if (pdf_d and pdf_d["cp3_1000"] > pdf_d["cp3_500"]) else 500
-        cp3_kg_stuk = st.selectbox("Gewicht CP3:", [500, 1000], index=0 if default_cp3_kg == 500 else 1, format_func=lambda x: f"{x} kg/pal", key=f"cp3_kg_{st.session_state.reset_id}", label_visibility="collapsed")
+        cp3_kg_stuk = st.selectbox("Gewicht CP3:",, index=0 if default_cp3_kg == 500 else 1, format_func=lambda x: f"{x} kg/pal", key=f"cp3_kg_{st.session_state.reset_id}", label_visibility="collapsed")
         product_info["CP3"]["gewicht"] = cp3_kg_stuk
 
 with col2:
@@ -500,23 +500,23 @@ if auto_aslast:
     geschatte_lengte_normaal = lengte_cp7_normaal + lengte_cp3_normaal + lengte_ibc_normaal + lengte_mw_normaal
 
     mag_enkele_dwars = (totaal_cp7_vloer % 2 == 1) and (geschatte_lengte_normaal + 1150 <= max_lengte)
+    richting_enkele_auto = "Smal (1100x1400)" if mag_enkele_dwars else "Lang (1400x1100)"
+    richting_enkele_auto_750 = "Smal (1150x1400)" if mag_enkele_dwars else "Lang (1400x1150)"
 
     if rest_750 >= 36 and rest_600 == 0 and pallets_cp3 == 0 and pallets_ibc == 0 and max_lengte == 13550:
         voeg_partij_toe_aslast("CP7_750", 4, "Smal (1150x1400)", centraal=True)
         rest_750 -= 4
-        vloer_750 = math.ceil(rest_750 / 2)
     elif rest_600 >= 36 and rest_750 == 0 and pallets_cp3 == 0 and pallets_ibc == 0 and max_lengte == 13550:
         voeg_partij_toe_aslast("CP7_600", 4, "Smal (1100x1400)", centraal=True)
         rest_600 -= 4
-        vloer_600 = math.ceil(rest_600 / 2)
-    elif mag_enkele_dwars:
+    elif totaal_cp7_vloer % 2 == 1:
         if vloer_600 % 2 == 1 and rest_600 > 0:
             enkele_600 = 1 if rest_600 % 2 == 1 else 2
-            voeg_partij_toe_aslast("CP7_600", enkele_600, "Smal (1100x1400)", centraal=True)
+            voeg_partij_toe_aslast("CP7_600", enkele_600, richting_enkele_auto, centraal=True)
             rest_600 -= enkele_600
         elif vloer_750 % 2 == 1 and rest_750 > 0:
             enkele_750 = 1 if rest_750 % 2 == 1 else 2
-            voeg_partij_toe_aslast("CP7_750", enkele_750, "Smal (1150x1400)", centraal=True)
+            voeg_partij_toe_aslast("CP7_750", enkele_750, richting_enkele_auto_750, centraal=True)
             rest_750 -= enkele_750
 
     heeft_pdf_cp3 = pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3)
@@ -542,8 +542,30 @@ else:
     voeg_partij_toe_aslast("IBC", as_v_ibc, "Lang", centraal=handmatig_centraal)
     voeg_partij_toe_aslast("Maatwerk", as_v_mw, "Lang", centraal=handmatig_centraal)
 
+    vloer_h_600 = math.ceil(actuele_aantallen["CP7_600"] / 2)
+    vloer_h_750 = math.ceil(actuele_aantallen["CP7_750"] / 2)
+    totaal_h_cp7 = vloer_h_600 + vloer_h_750
+    oneven_cp7_gecentreerd = False
+
     for art_naam in st.session_state.klik_volgorde:
-        if art_naam in actuele_aantallen: voeg_partij_toe(art_naam, actuele_aantallen[art_naam])
+        if art_naam == "CP7_600":
+            rest_h = actuele_aantallen["CP7_600"]
+            if totaal_h_cp7 % 2 == 1 and vloer_h_600 % 2 == 1 and rest_h > 0 and not oneven_cp7_gecentreerd:
+                enkele_h = 1 if rest_h % 2 == 1 else 2
+                voeg_partij_toe_aslast("CP7_600", enkele_h, "Lang", centraal=True)
+                rest_h -= enkele_h
+                oneven_cp7_gecentreerd = True
+            voeg_partij_toe("CP7_600", rest_h)
+        elif art_naam == "CP7_750":
+            rest_h = actuele_aantallen["CP7_750"]
+            if totaal_h_cp7 % 2 == 1 and vloer_h_750 % 2 == 1 and rest_h > 0 and not oneven_cp7_gecentreerd:
+                enkele_h = 1 if rest_h % 2 == 1 else 2
+                voeg_partij_toe_aslast("CP7_750", enkele_h, "Lang", centraal=True)
+                rest_h -= enkele_h
+                oneven_cp7_gecentreerd = True
+            voeg_partij_toe("CP7_750", rest_h)
+        elif art_naam in actuele_aantallen:
+            voeg_partij_toe(art_naam, actuele_aantallen[art_naam])
 
     voeg_partij_toe_aslast("CP3", as_a_cp3, "Lang", centraal=handmatig_centraal)
     voeg_partij_toe_aslast("CP7_600", as_a_cp7_600, richting_a_cp7_600, centraal=handmatig_centraal)
@@ -564,6 +586,8 @@ ax.text(max_lengte - 80, max_breedte + 45, f"DEUREN ({max_lengte / 1000:.2f} m) 
 
 geplaatste_blokken = []
 x_onder, x_boven, ibc_paar_teller, idx = 0, 0, 0, 0
+breedte_op_onder = 0
+breedte_op_boven = 0
 
 while idx < len(laad_lijst):
     item = laad_lijst[idx]
@@ -577,12 +601,13 @@ while idx < len(laad_lijst):
 
     if item["force_midden"]:
         start_x = max(x_onder, x_boven)
-        vulling_kleur = "#ff0000" if (start_x + item["L"] > max_lengte) else item["kleur"]
+        vulling_kleur = "#ff0000" if (start_x + item["L"] > max_lengte or item["B"] > max_breedte) else item["kleur"]
         y_pos = (max_breedte - item["B"]) / 2
         ax.add_patch(patches.Rectangle((start_x, y_pos), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85))
         ax.text(start_x + (item["L"]/2), y_pos + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         geplaatste_blokken.append({"x_mid": start_x + (item["L"] / 2), "kg": item["kg"]})
         x_onder, x_boven = start_x + item["L"], start_x + item["L"]
+        breedte_op_onder, breedte_op_boven = 0, 0
         idx += 1
         continue
 
@@ -604,6 +629,7 @@ while idx < len(laad_lijst):
                 geplaatste_blokken.append({"x_mid": x_pos_boven + 600, "kg": kg_2})
 
                 x_onder, x_boven = x_pos_onder + 1000, x_pos_boven + 1200
+                breedte_op_onder, breedte_op_boven = 1200, 1000
             else:
                 vulling_kleur1 = "#ff0000" if (x_onder + 1200 > max_lengte) else item["kleur"]
                 ax.add_patch(patches.Rectangle((x_onder, 20), 1200, 1000, linewidth=1, edgecolor='white', facecolor=vulling_kleur1, alpha=0.85))
@@ -616,20 +642,31 @@ while idx < len(laad_lijst):
                 geplaatste_blokken.append({"x_mid": x_boven + 500, "kg": kg_2})
 
                 x_onder, x_boven = x_onder + 1200, x_boven + 1000
+                breedte_op_onder, breedte_op_boven = 1000, 1200
             ibc_paar_teller += 1; idx += 2; continue
 
     if x_onder <= x_boven:
-        vulling_kleur = "#ff0000" if (x_onder + item["L"] > max_lengte) else item["kleur"]
+        if x_onder < x_boven and (item["B"] + breedte_op_boven > max_breedte):
+            x_onder = x_boven
+            breedte_op_onder = 0
+
+        vulling_kleur = "#ff0000" if (x_onder + item["L"] > max_lengte or item["B"] > max_breedte) else item["kleur"]
         ax.add_patch(patches.Rectangle((x_onder, 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85))
         ax.text(x_onder + (item["L"]/2), 20 + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         geplaatste_blokken.append({"x_mid": x_onder + (item["L"] / 2), "kg": item["kg"]})
         x_onder += item["L"]
+        breedte_op_onder = item["B"]
     else:
-        vulling_kleur = "#ff0000" if (x_boven + item["L"] > max_lengte) else item["kleur"]
+        if x_boven < x_onder and (item["B"] + breedte_op_onder > max_breedte):
+            x_boven = x_onder
+            breedte_op_boven = 0
+
+        vulling_kleur = "#ff0000" if (x_boven + item["L"] > max_lengte or item["B"] > max_breedte) else item["kleur"]
         ax.add_patch(patches.Rectangle((x_boven, max_breedte - item["B"] - 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85))
         ax.text(x_boven + (item["L"]/2), max_breedte - item["B"] - 20 + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         geplaatste_blokken.append({"x_mid": x_boven + (item["L"] / 2), "kg": item["kg"]})
         x_boven += item["L"]
+        breedte_op_boven = item["B"]
     idx += 1
 totaal_lading_kg = sum(b["kg"] for b in geplaatste_blokken)
 zwaartepunt_mm = (sum(b["x_mid"] * b["kg"] for b in geplaatste_blokken) / totaal_lading_kg) if totaal_lading_kg > 0 else 0
@@ -657,7 +694,6 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     else: st.error(f"❌ Past NIET! {abs(restruimte)} mm tekort — **Totaal gewicht lading:** {totaal_lading_kg} kg")
 
     st.pyplot(fig, use_container_width=True)
-
     if max_lengte == 13550 and totaal_lading_kg > 0:
         trekas_leeg, schotel_leeg, tridem_leeg = 2800, 2000, 5200
         afstand_assen = 10200 - 1600
