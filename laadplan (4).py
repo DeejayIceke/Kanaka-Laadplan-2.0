@@ -790,7 +790,7 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
         background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
         color: white; font-weight: 700; font-size: 16px; cursor: pointer;
         box-shadow: 0 3px 10px rgba(0,0,0,0.25);">
-        🔍 Groot scherm (90° gedraaid)
+        🔍 Groot scherm
     </button>
     <script>
     const b64 = "{b64_img}";
@@ -801,16 +801,16 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
 
         let overlay = pDoc.createElement('div');
         overlay.id = 'fons-fs-overlay';
-        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0f172a;z-index:2147483647;display:flex;align-items:center;justify-content:center;overflow:hidden;';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0f172a;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;';
         overlay.addEventListener('click', function() {{ overlay.remove(); }});
 
         let hint = pDoc.createElement('div');
-        hint.innerText = '👆 Tik op de tekening om terug te keren';
-        hint.style.cssText = 'position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.9);color:#f8fafc;padding:8px 16px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid #38bdf8;z-index:2147483647;pointer-events:none;white-space:nowrap;';
+        hint.innerText = '👆 Tik op het scherm om terug te keren';
+        hint.style.cssText = 'position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.9);color:#f8fafc;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid #38bdf8;z-index:2147483647;pointer-events:none;white-space:nowrap;';
 
         let img = pDoc.createElement('img');
         img.src = 'data:image/png;base64,' + b64;
-        img.style.cssText = 'width:88vh;height:auto;max-height:92vw;transform:rotate(90deg);object-fit:contain;background:white;border-radius:8px;padding:6px;box-shadow:0 8px 30px rgba(0,0,0,0.6);';
+        img.style.cssText = 'max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;background:white;border-radius:8px;padding:6px;box-shadow:0 8px 30px rgba(0,0,0,0.6);';
 
         overlay.appendChild(img);
         overlay.appendChild(hint);
