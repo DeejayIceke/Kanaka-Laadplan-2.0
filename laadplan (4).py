@@ -363,9 +363,10 @@ with col5:
         product_info["Maatwerk"]["lengte"] = mw_L
         product_info["Maatwerk"]["breedte"] = mw_B
         product_info["Maatwerk"]["gewicht"] = mw_kg
-auto_aslast = False
+handmatig_modus = False
 if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0:
-    auto_aslast = st.checkbox("⚖️ Automatisch optimaliseren op aslast & hoogte (CP7 hoog altijd samen → CP3 → IBC laag)", value=(pdf_d is not None))
+    handmatig_modus = st.checkbox("🛠️ Handmatig aanpassen (zelf volgorde & voor/achter bepalen)", value=False)
+auto_aslast = not handmatig_modus
 
 as_v_cp3, as_a_cp3 = 0, 0
 as_v_cp7_600, as_a_cp7_600 = 0, 0
@@ -384,8 +385,8 @@ richting_a_cp7_600 = "Lang (1400x1100)"
 richting_v_cp7_750 = "Lang (1400x1150)"
 richting_a_cp7_750 = "Lang (1400x1150)"
 
-if not auto_aslast and (pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0):
-    with st.expander("⚖️ Klik hier voor handmatige plaatsing vooraan (VOR) / achteraan (ACH) per artikel"):
+if handmatig_modus and (pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0):
+    with st.expander("⚖️ Handmatige plaatsing vooraan (VOR) / achteraan (ACH) per artikel", expanded=True):
         v_col1, v_col2, v_col3, v_col4, v_col5 = st.columns(5)
         with v_col1:
             if pallets_cp3 > 0:
@@ -666,6 +667,7 @@ while idx < len(laad_lijst):
                 x_onder, x_boven = x_onder + 1200, x_boven + 1000
                 breedte_op_onder, breedte_op_boven = 1000, 1200
             ibc_paar_teller += 1; idx += 2; continue
+
     if x_onder <= x_boven:
         if x_onder < x_boven and (item["B"] + breedte_op_boven > max_breedte):
             x_onder = x_boven
@@ -715,7 +717,6 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     else: st.error(f"❌ Past NIET! {abs(restruimte)} mm tekort — **Totaal gewicht lading:** {totaal_lading_kg} kg")
 
     st.pyplot(fig, use_container_width=True)
-
     if max_lengte == 13550 and totaal_lading_kg > 0:
         trekas_leeg, schotel_leeg, tridem_leeg = 2800, 2000, 5200
         afstand_assen = 10200 - 1600
