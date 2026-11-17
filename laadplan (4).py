@@ -373,6 +373,7 @@ as_v_cp7_600, as_a_cp7_600 = 0, 0
 as_v_cp7_750, as_a_cp7_750 = 0, 0
 as_v_ibc, as_a_ibc = 0, 0
 as_v_mw, as_a_mw = 0, 0
+handmatig_centraal = False
 
 richting_v_cp7_600 = "Lang (1400x1100)"
 richting_a_cp7_600 = "Lang (1400x1100)"
@@ -380,7 +381,15 @@ richting_v_cp7_750 = "Lang (1400x1150)"
 richting_a_cp7_750 = "Lang (1400x1150)"
 
 if not auto_aslast and (pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0):
-    with st.expander("⚖️ Klik hier voor handmatige aslast-regelingen (Midden vooraan/achteraan)"):
+    with st.expander("⚖️ Klik hier voor handmatige plaatsing vooraan (VOR) / achteraan (ACH)"):
+        plaatsing_keuze = st.radio(
+            "Hoe wil je de pallets onder VOR / ACH plaatsen?",
+            ["Naast elkaar (2 rijen)", "Centraal in het midden"],
+            horizontal=True,
+            key=f"pl_keuze_{st.session_state.reset_id}"
+        )
+        handmatig_centraal = (plaatsing_keuze == "Centraal in het midden")
+
         v_col1, v_col2, v_col3, v_col4, v_col5 = st.columns(5)
         with v_col1:
             if pallets_cp3 > 0:
@@ -435,7 +444,7 @@ def haal_pallet_kleur(art_naam, overgebleven, standaard_kleur):
         return "#c0392b" if overgebleven >= 2 else "#ff7675"
     return standaard_kleur
 
-def voeg_partij_toe_aslast(art_naam, aantal, richting, override_kg=None):
+def voeg_partij_toe_aslast(art_naam, aantal, richting, override_kg=None, centraal=True):
     if aantal > 0:
         info = product_info[art_naam].copy()
         stuk_kg = override_kg if override_kg is not None else info["gewicht"]
@@ -453,7 +462,7 @@ def voeg_partij_toe_aslast(art_naam, aantal, richting, override_kg=None):
             laad_lijst.append({
                 "naam": f"{info['label']}{h_label}", "naam_puur": art_naam,
                 "L": info["lengte"], "B": info["breedte"], "kleur": gekozen_kleur,
-                "force_midden": True, "kg": stapel_kg
+                "force_midden": centraal, "kg": stapel_kg
             })
 
 def voeg_partij_toe(art_naam, aantal, dwars=False, override_kg=None):
@@ -493,21 +502,21 @@ if auto_aslast:
     mag_enkele_dwars = (totaal_cp7_vloer % 2 == 1) and (geschatte_lengte_normaal + 1150 <= max_lengte)
 
     if rest_750 >= 36 and rest_600 == 0 and pallets_cp3 == 0 and pallets_ibc == 0 and max_lengte == 13550:
-        voeg_partij_toe_aslast("CP7_750", 4, "Smal (1150x1400)")
+        voeg_partij_toe_aslast("CP7_750", 4, "Smal (1150x1400)", centraal=True)
         rest_750 -= 4
         vloer_750 = math.ceil(rest_750 / 2)
     elif rest_600 >= 36 and rest_750 == 0 and pallets_cp3 == 0 and pallets_ibc == 0 and max_lengte == 13550:
-        voeg_partij_toe_aslast("CP7_600", 4, "Smal (1100x1400)")
+        voeg_partij_toe_aslast("CP7_600", 4, "Smal (1100x1400)", centraal=True)
         rest_600 -= 4
         vloer_600 = math.ceil(rest_600 / 2)
     elif mag_enkele_dwars:
         if vloer_600 % 2 == 1 and rest_600 > 0:
             enkele_600 = 1 if rest_600 % 2 == 1 else 2
-            voeg_partij_toe_aslast("CP7_600", enkele_600, "Smal (1100x1400)")
+            voeg_partij_toe_aslast("CP7_600", enkele_600, "Smal (1100x1400)", centraal=True)
             rest_600 -= enkele_600
         elif vloer_750 % 2 == 1 and rest_750 > 0:
             enkele_750 = 1 if rest_750 % 2 == 1 else 2
-            voeg_partij_toe_aslast("CP7_750", enkele_750, "Smal (1150x1400)")
+            voeg_partij_toe_aslast("CP7_750", enkele_750, "Smal (1150x1400)", centraal=True)
             rest_750 -= enkele_750
 
     heeft_pdf_cp3 = pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3)
@@ -521,26 +530,26 @@ if auto_aslast:
 
     voeg_partij_toe("CP3", cp3_licht_voor, override_kg=500)
     voeg_partij_toe("CP7_600", rest_600)
-    voeg_partij_toe("CP7_750", rest_750)
     voeg_partij_toe("CP3", cp3_zwaar, override_kg=1000)
     voeg_partij_toe("IBC", pallets_ibc)
     voeg_partij_toe("Maatwerk", pallets_mw)
+    voeg_partij_toe("CP7_750", rest_750)
     voeg_partij_toe("CP3", cp3_licht_achter, override_kg=500)
 else:
-    voeg_partij_toe_aslast("CP3", as_v_cp3, "Lang")
-    voeg_partij_toe_aslast("CP7_600", as_v_cp7_600, richting_v_cp7_600)
-    voeg_partij_toe_aslast("CP7_750", as_v_cp7_750, richting_v_cp7_750)
-    voeg_partij_toe_aslast("IBC", as_v_ibc, "Lang")
-    voeg_partij_toe_aslast("Maatwerk", as_v_mw, "Lang")
+    voeg_partij_toe_aslast("CP3", as_v_cp3, "Lang", centraal=handmatig_centraal)
+    voeg_partij_toe_aslast("CP7_600", as_v_cp7_600, richting_v_cp7_600, centraal=handmatig_centraal)
+    voeg_partij_toe_aslast("CP7_750", as_v_cp7_750, richting_v_cp7_750, centraal=handmatig_centraal)
+    voeg_partij_toe_aslast("IBC", as_v_ibc, "Lang", centraal=handmatig_centraal)
+    voeg_partij_toe_aslast("Maatwerk", as_v_mw, "Lang", centraal=handmatig_centraal)
 
     for art_naam in st.session_state.klik_volgorde:
         if art_naam in actuele_aantallen: voeg_partij_toe(art_naam, actuele_aantallen[art_naam])
 
-    voeg_partij_toe_aslast("CP3", as_a_cp3, "Lang")
-    voeg_partij_toe_aslast("CP7_600", as_a_cp7_600, richting_a_cp7_600)
-    voeg_partij_toe_aslast("CP7_750", as_a_cp7_750, richting_a_cp7_750)
-    voeg_partij_toe_aslast("IBC", as_a_ibc, "Lang")
-    voeg_partij_toe_aslast("Maatwerk", as_a_mw, "Lang")
+    voeg_partij_toe_aslast("CP3", as_a_cp3, "Lang", centraal=handmatig_centraal)
+    voeg_partij_toe_aslast("CP7_600", as_a_cp7_600, richting_a_cp7_600, centraal=handmatig_centraal)
+    voeg_partij_toe_aslast("CP7_750", as_a_cp7_750, richting_a_cp7_750, centraal=handmatig_centraal)
+    voeg_partij_toe_aslast("IBC", as_a_ibc, "Lang", centraal=handmatig_centraal)
+    voeg_partij_toe_aslast("Maatwerk", as_a_mw, "Lang", centraal=handmatig_centraal)
 fig, ax = plt.subplots(figsize=(15, 4.1))
 ax.set_xlim(0, max_lengte)
 ax.set_ylim(-650 if max_lengte == 13550 else -200, max_breedte + 180)
