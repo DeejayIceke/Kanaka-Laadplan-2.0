@@ -745,7 +745,6 @@ st.write("### 3. Plan & Aslast-controle:")
 if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0 or as_v_cp3 + as_v_cp7_600 + as_v_cp7_750 + as_v_ibc + as_v_mw + as_a_cp3 + as_a_cp7_600 + as_a_cp7_750 + as_a_ibc + as_a_mw > 0:
     if restruimte >= 0: st.success(f"✅ Past! Nog {restruimte} mm over — **Totaal gewicht lading:** {totaal_lading_kg} kg")
     else: st.error(f"❌ Past NIET! {abs(restruimte)} mm tekort — **Totaal gewicht lading:** {totaal_lading_kg} kg")
-
     st.pyplot(fig, use_container_width=True)
     if max_lengte == 13550 and totaal_lading_kg > 0:
         trekas_leeg, schotel_leeg, tridem_leeg = 2800, 2000, 5200
@@ -779,43 +778,46 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
 
     st.download_button(label="📸 Download Laadplan (Afbeelding)", data=png_bytes, file_name="fons_laadplan.png", mime="image/png")
 
-    st.markdown(f"""
-        <div class="alleen-mobiel" style="margin-top:0.5rem;">
-            <button onclick="window.openFonsFullscreen('{b64_img}')" style="
-                width:100%; padding:0.8rem 1rem; border-radius:0.6rem; border:none;
-                background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-                color:white; font-weight:700; font-size:15px; cursor:pointer;
-                box-shadow:0 3px 10px rgba(0,0,0,0.25);">
-                🔍 Groot scherm (90° gedraaid)
-            </button>
-        </div>
-    """, unsafe_allow_html=True)
-
-    components.html("""
+    components.html(f"""
+    <style>
+        body {{ margin: 0; padding: 0; background: transparent; font-family: sans-serif; }}
+        @media (min-width: 951px) {{
+            #fs-btn {{ display: none; }}
+        }}
+    </style>
+    <button id="fs-btn" style="
+        width: 100%; padding: 14px 16px; border-radius: 10px; border: none;
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        color: white; font-weight: 700; font-size: 16px; cursor: pointer;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.25);">
+        🔍 Groot scherm (90° gedraaid)
+    </button>
     <script>
-    const pDoc = window.parent.document;
-    window.parent.openFonsFullscreen = function(b64) {
+    const b64 = "{b64_img}";
+    document.getElementById('fs-btn').addEventListener('click', function() {{
+        const pDoc = window.parent.document;
         let oud = pDoc.getElementById('fons-fs-overlay');
         if (oud) oud.remove();
+
         let overlay = pDoc.createElement('div');
         overlay.id = 'fons-fs-overlay';
-        overlay.style.cssText = 'position:fixed;inset:0;background:#0f172a;z-index:999999;display:flex;align-items:center;justify-content:center;overflow:hidden;';
-        overlay.onclick = function() { overlay.remove(); };
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0f172a;z-index:2147483647;display:flex;align-items:center;justify-content:center;overflow:hidden;';
+        overlay.addEventListener('click', function() {{ overlay.remove(); }});
 
         let hint = pDoc.createElement('div');
         hint.innerText = '👆 Tik op de tekening om terug te keren';
-        hint.style.cssText = 'position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.85);color:#f8fafc;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid #38bdf8;z-index:1000000;pointer-events:none;';
+        hint.style.cssText = 'position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.9);color:#f8fafc;padding:8px 16px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid #38bdf8;z-index:2147483647;pointer-events:none;white-space:nowrap;';
 
         let img = pDoc.createElement('img');
         img.src = 'data:image/png;base64,' + b64;
-        img.style.cssText = 'width:92vh;height:auto;max-height:92vw;transform:rotate(90deg);object-fit:contain;background:white;border-radius:8px;padding:6px;box-shadow:0 8px 30px rgba(0,0,0,0.6);cursor:pointer;';
+        img.style.cssText = 'width:88vh;height:auto;max-height:92vw;transform:rotate(90deg);object-fit:contain;background:white;border-radius:8px;padding:6px;box-shadow:0 8px 30px rgba(0,0,0,0.6);';
 
         overlay.appendChild(img);
         overlay.appendChild(hint);
         pDoc.body.appendChild(overlay);
-    };
+    }});
     </script>
-    """, height=0, width=0)
+    """, height=56)
 else:
     st.info("Container is leeg. Upload een PDF/foto-laadbon of gebruik de + en - knoppen om te beginnen.")
 
