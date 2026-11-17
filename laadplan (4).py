@@ -338,7 +338,7 @@ with col1:
     if pallets_cp3 > 0:
         if "CP3" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP3")
         default_cp3_kg = 1000 if (pdf_d and pdf_d["cp3_1000"] > pdf_d["cp3_500"]) else 500
-        cp3_kg_stuk = st.selectbox("Gewicht CP3:", [500, 1000], index=0 if default_cp3_kg == 500 else 1, format_func=lambda x: f"{x} kg/pal", key=f"cp3_kg_{st.session_state.reset_id}", label_visibility="collapsed")
+        cp3_kg_stuk = st.selectbox("Gewicht CP3:",, index=0 if default_cp3_kg == 500 else 1, format_func=lambda x: f"{x} kg/pal", key=f"cp3_kg_{st.session_state.reset_id}", label_visibility="collapsed")
         product_info["CP3"]["gewicht"] = cp3_kg_stuk
 
 with col2:
@@ -564,7 +564,6 @@ if auto_aslast:
     voeg_partij_toe("Maatwerk", pallets_mw)
     voeg_partij_toe("IBC", pallets_ibc)
 else:
-    # 1. Vooraan (VOR): jouw handmatige keuzes tegen het kopschot
     voor_items = [
         ("CP7_600", as_v_cp7_600, richting_v_cp7_600, c_v_cp7_600),
         ("CP7_750", as_v_cp7_750, richting_v_cp7_750, c_v_cp7_750),
@@ -579,14 +578,12 @@ else:
         if aantal > 0 and not is_centr:
             voeg_partij_toe_aslast(art, aantal, richt, centraal=False)
 
-    # 2. Hoofdlading behoudt de geoptimaliseerde hoog-naar-laag volgorde (CP7 -> CP3 -> Maatwerk -> IBC)
     rest_h_600 = actuele_aantallen["CP7_600"]
     rest_h_750 = actuele_aantallen["CP7_750"]
     vloer_h_600 = math.ceil(rest_h_600 / 2)
     vloer_h_750 = math.ceil(rest_h_750 / 2)
     totaal_h_cp7 = vloer_h_600 + vloer_h_750
 
-    # Als er in het midden nog 1 oneven CP7-vloerstapel overblijft (en niet al vooraan gezet is), centreer die zodat niets verspringt
     if totaal_h_cp7 % 2 == 1 and (as_v_cp7_600 + as_v_cp7_750 == 0):
         if vloer_h_600 % 2 == 1 and rest_h_600 > 0:
             enkele_h = 1 if rest_h_600 % 2 == 1 else 2
@@ -602,47 +599,6 @@ else:
     voeg_partij_toe("CP3", actuele_aantallen["CP3"])
     voeg_partij_toe("Maatwerk", actuele_aantallen["Maatwerk"])
     voeg_partij_toe("IBC", actuele_aantallen["IBC"])
-
-    # 3. Achteraan (ACH): jouw handmatige keuzes bij de deuren
-    achter_items = [
-        ("CP3", as_a_cp3, "Lang", c_a_cp3),
-        ("CP7_600", as_a_cp7_600, richting_a_cp7_600, c_a_cp7_600),
-        ("CP7_750", as_a_cp7_750, richting_a_cp7_750, c_a_cp7_750),
-        ("IBC", as_a_ibc, "Lang", c_a_ibc),
-        ("Maatwerk", as_a_mw, "Lang", c_a_mw),
-    ]
-    for art, aantal, richt, is_centr in achter_items:
-        if aantal > 0 and not is_centr:
-            voeg_partij_toe_aslast(art, aantal, richt, centraal=False)
-    for art, aantal, richt, is_centr in achter_items:
-        if aantal > 0 and is_centr:
-            voeg_partij_toe_aslast(art, aantal, richt, centraal=True)
-
-
-    vloer_h_600 = math.ceil(actuele_aantallen["CP7_600"] / 2)
-    vloer_h_750 = math.ceil(actuele_aantallen["CP7_750"] / 2)
-    totaal_h_cp7 = vloer_h_600 + vloer_h_750
-    oneven_cp7_gecentreerd = False
-
-    for art_naam in st.session_state.klik_volgorde:
-        if art_naam == "CP7_600":
-            rest_h = actuele_aantallen["CP7_600"]
-            if totaal_h_cp7 % 2 == 1 and vloer_h_600 % 2 == 1 and rest_h > 0 and not oneven_cp7_gecentreerd:
-                enkele_h = 1 if rest_h % 2 == 1 else 2
-                voeg_partij_toe_aslast("CP7_600", enkele_h, "Lang", centraal=True)
-                rest_h -= enkele_h
-                oneven_cp7_gecentreerd = True
-            voeg_partij_toe("CP7_600", rest_h)
-        elif art_naam == "CP7_750":
-            rest_h = actuele_aantallen["CP7_750"]
-            if totaal_h_cp7 % 2 == 1 and vloer_h_750 % 2 == 1 and rest_h > 0 and not oneven_cp7_gecentreerd:
-                enkele_h = 1 if rest_h % 2 == 1 else 2
-                voeg_partij_toe_aslast("CP7_750", enkele_h, "Lang", centraal=True)
-                rest_h -= enkele_h
-                oneven_cp7_gecentreerd = True
-            voeg_partij_toe("CP7_750", rest_h)
-        elif art_naam in actuele_aantallen:
-            voeg_partij_toe(art_naam, actuele_aantallen[art_naam])
 
     achter_items = [
         ("CP3", as_a_cp3, "Lang", c_a_cp3),
@@ -779,6 +735,7 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     else: st.error(f"❌ Past NIET! {abs(restruimte)} mm tekort — **Totaal gewicht lading:** {totaal_lading_kg} kg")
 
     st.pyplot(fig, use_container_width=True)
+
     if max_lengte == 13550 and totaal_lading_kg > 0:
         trekas_leeg, schotel_leeg, tridem_leeg = 2800, 2000, 5200
         afstand_assen = 10200 - 1600
