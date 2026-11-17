@@ -81,17 +81,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
     res = {
-        "cp3_500": 0,
-        "cp3_1000": 0,
-        "cp7_600": 0,
-        "cp7_750": 0,
-        "ibc": 0,
-        "totaal_gewicht": 0,
-        "bon_totaal_pal": 0,
-        "regels": [],
-        "ruwe_tekst": volledige_tekst
+        "cp3_500": 0, "cp3_1000": 0, "cp7_600": 0, "cp7_750": 0, "ibc": 0,
+        "totaal_gewicht": 0, "bon_totaal_pal": 0, "regels": [], "ruwe_tekst": volledige_tekst
     }
-
     regels = [r.upper().strip() for r in volledige_tekst.splitlines() if r.strip()]
 
     for r in regels:
@@ -100,16 +92,12 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
             if tot_m:
                 res["bon_totaal_pal"] = int(tot_m.group(1))
 
-    witte_res = {
-        "cp3_500": 0, "cp3_1000": 0, "cp7_600": 0, "cp7_750": 0, "ibc": 0,
-        "totaal_gewicht": 0, "regels": []
-    }
+    witte_res = {"cp3_500": 0, "cp3_1000": 0, "cp7_600": 0, "cp7_750": 0, "ibc": 0, "totaal_gewicht": 0, "regels": []}
     laatste_type = None
 
     for r in regels:
         if "ITEMS TOTAL" in r or "ITEM TOTAL" in r or "TOTAAL" in r:
             continue
-
         if "CNPE" in r or "IBC" in r:
             laatste_type = "IBC"
         elif any(c in r for c in ["CP-7", "CP7", "-NB", "-N8", "PA210", "1,4X1,2"]):
@@ -164,22 +152,16 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
                 witte_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 500
 
     witte_totaal = witte_res["cp3_500"] + witte_res["cp3_1000"] + witte_res["cp7_600"] + witte_res["cp7_750"] + witte_res["ibc"]
-
     if not is_foto or (witte_totaal > 0 and (res["bon_totaal_pal"] == 0 or witte_totaal == res["bon_totaal_pal"])):
         res.update(witte_res)
         return res
-
-    kop_res = {
-        "cp3_500": 0, "cp3_1000": 0, "cp7_600": 0, "cp7_750": 0, "ibc": 0,
-        "totaal_gewicht": 0, "regels": []
-    }
+    kop_res = {"cp3_500": 0, "cp3_1000": 0, "cp7_600": 0, "cp7_750": 0, "ibc": 0, "totaal_gewicht": 0, "regels": []}
     for idx, r in enumerate(regels):
         if "ITEMS TOTAL" in r or "ITEM TOTAL" in r:
             continue
         kop_match = re.search(r'(\d+)\s*(?:PAL|PA[L1I])\s*/\s*([\d\.,]+)\s*KG', r)
         if not kop_match:
             continue
-
         aantal_pal = int(kop_match.group(1))
         try:
             gewicht_kg = int(float(kop_match.group(2).replace(".", "").replace(",", ".")))
@@ -187,7 +169,6 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
             gewicht_kg = 0
 
         context = " ".join(regels[max(0, idx - 1):min(len(regels), idx + 3)])
-
         if "CNPE" in context or "IBC" in context:
             if gewicht_kg > 0 and gewicht_kg % 1000 == 0 and (gewicht_kg // 1000) > aantal_pal:
                 aantal_pal = gewicht_kg // 1000
@@ -230,10 +211,7 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
                 kop_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 500
 
     kop_totaal = kop_res["cp3_500"] + kop_res["cp3_1000"] + kop_res["cp7_600"] + kop_res["cp7_750"] + kop_res["ibc"]
-    if kop_totaal > witte_totaal:
-        res.update(kop_res)
-    else:
-        res.update(witte_res)
+    res.update(kop_res if kop_totaal > witte_totaal else witte_res)
     return res
 
 def lees_kaneka_bestand(bestand):
@@ -257,16 +235,12 @@ def lees_kaneka_bestand(bestand):
                 pytesseract.image_to_string(grijs, config="--psm 6"),
                 pytesseract.image_to_string(afbeelding.rotate(180, expand=True), config="--psm 6"),
             ]
-
-            beste_res = None
-            beste_pal = -1
+            beste_res, beste_pal = None, -1
             for t in kandidaten:
                 r = verwerk_laadbon_tekst(t, is_foto=True)
                 tot = r["cp3_500"] + r["cp3_1000"] + r["cp7_600"] + r["cp7_750"] + r["ibc"]
                 if tot > beste_pal:
-                    beste_pal = tot
-                    beste_res = r
-
+                    beste_pal, beste_res = tot, r
             return beste_res
         except Exception:
             return "ONLEESBARE_FOTO"
@@ -281,7 +255,6 @@ def lees_kaneka_bestand(bestand):
 
     if volledige_tekst.strip():
         return verwerk_laadbon_tekst(volledige_tekst, is_foto=False)
-
     return "GEEN_TEKST"
 if "klik_volgorde" not in st.session_state: st.session_state.klik_volgorde = []
 if "reset_id" not in st.session_state: st.session_state.reset_id = 0
@@ -321,6 +294,7 @@ with st.expander("📄 Laadbon importeren (PDF of Foto) — Automatisch invullen
             st.warning("⚠️ Bestand gelezen, maar geen regels herkend. Maak een rechtere/scherpere foto of gebruik de SAP-PDF.")
         with st.expander("🔍 Bekijk uitgelezen tekst van de bon"):
             st.text(d.get("ruwe_tekst", ""))
+
 st.write("### 1. Kies container / oplegger:")
 container_type = st.selectbox(
     "1. Kies container:", 
@@ -330,7 +304,6 @@ container_type = st.selectbox(
 
 max_lengte = 13550 if "45ft" in container_type else 12030 if "40ft" in container_type else 5898
 max_breedte = 2426 if "45ft" in container_type else 2350
-
 product_info = {
     "CP3": {"lengte": 1150, "breedte": 1150, "kleur": "#3498db", "stapelbaar": False, "label": "CP3", "gewicht": 500},
     "CP7_600": {"lengte": 1400, "breedte": 1100, "kleur": "#2ecc71", "stapelbaar": True, "label": "CP7 600", "gewicht": 600},
@@ -390,9 +363,10 @@ with col5:
         product_info["Maatwerk"]["lengte"] = mw_L
         product_info["Maatwerk"]["breedte"] = mw_B
         product_info["Maatwerk"]["gewicht"] = mw_kg
+
 auto_aslast = False
 if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0:
-    auto_aslast = st.checkbox("⚖️ Automatisch optimaliseren op aslast & oppervlakte (even CP7 altijd naast elkaar, enkele/kopstapels vooraan dwars)", value=(pdf_d is not None))
+    auto_aslast = st.checkbox("⚖️ Automatisch optimaliseren op aslast & oppervlakte (alleen vooraan dwars als dit past in de lengte)", value=(pdf_d is not None))
 
 as_v_cp3, as_a_cp3 = 0, 0
 as_v_cp7_600, as_a_cp7_600 = 0, 0
@@ -477,13 +451,9 @@ def voeg_partij_toe_aslast(art_naam, aantal, richting, override_kg=None):
             gekozen_kleur = haal_pallet_kleur(art_naam, overgebleven, info["kleur"])
             overgebleven -= 2
             laad_lijst.append({
-                "naam": f"{info['label']}{h_label}",
-                "naam_puur": art_naam,
-                "L": info["lengte"],
-                "B": info["breedte"],
-                "kleur": gekozen_kleur,
-                "force_midden": True,
-                "kg": stapel_kg
+                "naam": f"{info['label']}{h_label}", "naam_puur": art_naam,
+                "L": info["lengte"], "B": info["breedte"], "kleur": gekozen_kleur,
+                "force_midden": True, "kg": stapel_kg
             })
 
 def voeg_partij_toe(art_naam, aantal, dwars=False, override_kg=None):
@@ -501,13 +471,9 @@ def voeg_partij_toe(art_naam, aantal, dwars=False, override_kg=None):
             gekozen_kleur = haal_pallet_kleur(art_naam, overgebleven, info["kleur"])
             overgebleven -= 2
             laad_lijst.append({
-                "naam": f"{info['label']}{h_label}",
-                "naam_puur": art_naam,
-                "L": info["lengte"],
-                "B": info["breedte"],
-                "kleur": gekozen_kleur,
-                "force_midden": False,
-                "kg": stapel_kg
+                "naam": f"{info['label']}{h_label}", "naam_puur": art_naam,
+                "L": info["lengte"], "B": info["breedte"], "kleur": gekozen_kleur,
+                "force_midden": False, "kg": stapel_kg
             })
 
 if auto_aslast:
@@ -516,30 +482,33 @@ if auto_aslast:
 
     vloer_600 = math.ceil(rest_600 / 2)
     vloer_750 = math.ceil(rest_750 / 2)
+    totaal_cp7_vloer = vloer_600 + vloer_750
 
-    if rest_750 >= 34 and rest_600 == 0 and pallets_cp3 == 0 and pallets_ibc == 0 and max_lengte == 13550:
-        kop_750 = 4 if rest_750 >= 36 else (2 if vloer_750 % 2 == 1 else 0)
-        if kop_750 > 0:
-            voeg_partij_toe_aslast("CP7_750", kop_750, "Smal (1150x1400)")
-            rest_750 -= kop_750
-            vloer_750 = math.ceil(rest_750 / 2)
+    lengte_cp7_normaal = math.ceil(totaal_cp7_vloer / 2) * 1400
+    lengte_cp3_normaal = math.ceil(pallets_cp3 / 2) * 1150
+    lengte_ibc_normaal = math.ceil(pallets_ibc / 2) * (1100 if max_breedte == 2350 else 1000)
+    lengte_mw_normaal = math.ceil(pallets_mw / 2) * product_info["Maatwerk"]["lengte"]
+    geschatte_lengte_normaal = lengte_cp7_normaal + lengte_cp3_normaal + lengte_ibc_normaal + lengte_mw_normaal
 
-    if rest_600 >= 34 and rest_750 == 0 and pallets_cp3 == 0 and pallets_ibc == 0 and max_lengte == 13550:
-        kop_600 = 4 if rest_600 >= 36 else (2 if vloer_600 % 2 == 1 else 0)
-        if kop_600 > 0:
-            voeg_partij_toe_aslast("CP7_600", kop_600, "Smal (1100x1400)")
-            rest_600 -= kop_600
-            vloer_600 = math.ceil(rest_600 / 2)
+    mag_enkele_dwars = (totaal_cp7_vloer % 2 == 1) and (geschatte_lengte_normaal + 1150 <= max_lengte)
 
-    if vloer_600 % 2 == 1 and rest_600 > 0:
-        enkele_600 = 1 if rest_600 % 2 == 1 else 2
-        voeg_partij_toe_aslast("CP7_600", enkele_600, "Smal (1100x1400)")
-        rest_600 -= enkele_600
-
-    if vloer_750 % 2 == 1 and rest_750 > 0:
-        enkele_750 = 1 if rest_750 % 2 == 1 else 2
-        voeg_partij_toe_aslast("CP7_750", enkele_750, "Smal (1150x1400)")
-        rest_750 -= enkele_750
+    if rest_750 >= 36 and rest_600 == 0 and pallets_cp3 == 0 and pallets_ibc == 0 and max_lengte == 13550:
+        voeg_partij_toe_aslast("CP7_750", 4, "Smal (1150x1400)")
+        rest_750 -= 4
+        vloer_750 = math.ceil(rest_750 / 2)
+    elif rest_600 >= 36 and rest_750 == 0 and pallets_cp3 == 0 and pallets_ibc == 0 and max_lengte == 13550:
+        voeg_partij_toe_aslast("CP7_600", 4, "Smal (1100x1400)")
+        rest_600 -= 4
+        vloer_600 = math.ceil(rest_600 / 2)
+    elif mag_enkele_dwars:
+        if vloer_600 % 2 == 1 and rest_600 > 0:
+            enkele_600 = 1 if rest_600 % 2 == 1 else 2
+            voeg_partij_toe_aslast("CP7_600", enkele_600, "Smal (1100x1400)")
+            rest_600 -= enkele_600
+        elif vloer_750 % 2 == 1 and rest_750 > 0:
+            enkele_750 = 1 if rest_750 % 2 == 1 else 2
+            voeg_partij_toe_aslast("CP7_750", enkele_750, "Smal (1150x1400)")
+            rest_750 -= enkele_750
 
     heeft_pdf_cp3 = pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3)
     cp3_licht = pdf_d["cp3_500"] if heeft_pdf_cp3 else (pallets_cp3 if product_info["CP3"]["gewicht"] == 500 else 0)
@@ -601,8 +570,7 @@ while idx < len(laad_lijst):
         start_x = max(x_onder, x_boven)
         vulling_kleur = "#ff0000" if (start_x + item["L"] > max_lengte) else item["kleur"]
         y_pos = (max_breedte - item["B"]) / 2
-        rect = patches.Rectangle((start_x, y_pos), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85)
-        ax.add_patch(rect)
+        ax.add_patch(patches.Rectangle((start_x, y_pos), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85))
         ax.text(start_x + (item["L"]/2), y_pos + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         geplaatste_blokken.append({"x_mid": start_x + (item["L"] / 2), "kg": item["kg"]})
         x_onder, x_boven = start_x + item["L"], start_x + item["L"]
@@ -612,50 +580,44 @@ while idx < len(laad_lijst):
     if max_breedte == 2350 and item["naam_puur"] == "IBC":
         heeft_partner = (idx + 1 < len(laad_lijst) and laad_lijst[idx+1]["naam_puur"] == "IBC" and not laad_lijst[idx+1]["force_midden"])
         if heeft_partner:
-            kg_1 = item["kg"]
-            kg_2 = laad_lijst[idx+1]["kg"]
+            kg_1, kg_2 = item["kg"], laad_lijst[idx+1]["kg"]
             if ibc_paar_teller % 2 == 0:
                 x_pos_onder = max(x_onder, x_boven) if ibc_paar_teller == 0 else x_onder
                 vulling_kleur1 = "#ff0000" if (x_pos_onder + 1000 > max_lengte) else item["kleur"]
-                rect1 = patches.Rectangle((x_pos_onder, 20), 1000, 1200, linewidth=1, edgecolor='white', facecolor=vulling_kleur1, alpha=0.85)
-                ax.add_patch(rect1)
+                ax.add_patch(patches.Rectangle((x_pos_onder, 20), 1000, 1200, linewidth=1, edgecolor='white', facecolor=vulling_kleur1, alpha=0.85))
                 ax.text(x_pos_onder + 500, 20 + 600, f"IBC (Breed)\n{kg_1} kg", color="black", weight="bold", ha="center", va="center", fontsize=9.5)
                 geplaatste_blokken.append({"x_mid": x_pos_onder + 500, "kg": kg_1})
 
                 x_pos_boven = max(x_onder, x_boven) if ibc_paar_teller == 0 else x_boven
                 vulling_kleur2 = "#ff0000" if (x_pos_boven + 1200 > max_lengte) else item["kleur"]
-                rect2 = patches.Rectangle((x_pos_boven, max_breedte - 1000 - 20), 1200, 1000, linewidth=1, edgecolor='white', facecolor=vulling_kleur2, alpha=0.85)
-                ax.add_patch(rect2)
+                ax.add_patch(patches.Rectangle((x_pos_boven, max_breedte - 1000 - 20), 1200, 1000, linewidth=1, edgecolor='white', facecolor=vulling_kleur2, alpha=0.85))
                 ax.text(x_pos_boven + 600, max_breedte - 1000 - 20 + 500, f"IBC (Lang)\n{kg_2} kg", color="black", weight="bold", ha="center", va="center", fontsize=9.5)
                 geplaatste_blokken.append({"x_mid": x_pos_boven + 600, "kg": kg_2})
 
                 x_onder, x_boven = x_pos_onder + 1000, x_pos_boven + 1200
             else:
                 vulling_kleur1 = "#ff0000" if (x_onder + 1200 > max_lengte) else item["kleur"]
-                rect1 = patches.Rectangle((x_onder, 20), 1200, 1000, linewidth=1, edgecolor='white', facecolor=vulling_kleur1, alpha=0.85)
-                ax.add_patch(rect1)
+                ax.add_patch(patches.Rectangle((x_onder, 20), 1200, 1000, linewidth=1, edgecolor='white', facecolor=vulling_kleur1, alpha=0.85))
                 ax.text(x_onder + 600, 20 + 500, f"IBC (Lang)\n{kg_1} kg", color="black", weight="bold", ha="center", va="center", fontsize=9.5)
                 geplaatste_blokken.append({"x_mid": x_onder + 600, "kg": kg_1})
 
                 vulling_kleur2 = "#ff0000" if (x_boven + 1000 > max_lengte) else item["kleur"]
-                rect2 = patches.Rectangle((x_boven, max_breedte - 1200 - 20), 1000, 1200, linewidth=1, edgecolor='white', facecolor=vulling_kleur2, alpha=0.85)
-                ax.add_patch(rect2)
+                ax.add_patch(patches.Rectangle((x_boven, max_breedte - 1200 - 20), 1000, 1200, linewidth=1, edgecolor='white', facecolor=vulling_kleur2, alpha=0.85))
                 ax.text(x_boven + 500, max_breedte - 1200 - 20 + 600, f"IBC (Breed)\n{kg_2} kg", color="black", weight="bold", ha="center", va="center", fontsize=9.5)
                 geplaatste_blokken.append({"x_mid": x_boven + 500, "kg": kg_2})
 
                 x_onder, x_boven = x_onder + 1200, x_boven + 1000
             ibc_paar_teller += 1; idx += 2; continue
+
     if x_onder <= x_boven:
         vulling_kleur = "#ff0000" if (x_onder + item["L"] > max_lengte) else item["kleur"]
-        rect = patches.Rectangle((x_onder, 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85)
-        ax.add_patch(rect)
+        ax.add_patch(patches.Rectangle((x_onder, 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85))
         ax.text(x_onder + (item["L"]/2), 20 + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         geplaatste_blokken.append({"x_mid": x_onder + (item["L"] / 2), "kg": item["kg"]})
         x_onder += item["L"]
     else:
         vulling_kleur = "#ff0000" if (x_boven + item["L"] > max_lengte) else item["kleur"]
-        rect = patches.Rectangle((x_boven, max_breedte - item["B"] - 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85)
-        ax.add_patch(rect)
+        ax.add_patch(patches.Rectangle((x_boven, max_breedte - item["B"] - 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85))
         ax.text(x_boven + (item["L"]/2), max_breedte - item["B"] - 20 + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         geplaatste_blokken.append({"x_mid": x_boven + (item["L"] / 2), "kg": item["kg"]})
         x_boven += item["L"]
@@ -688,15 +650,10 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     st.pyplot(fig, use_container_width=True)
 
     if max_lengte == 13550 and totaal_lading_kg > 0:
-        trekas_leeg = 2800
-        schotel_leeg = 2000
-        tridem_leeg = 5200
+        trekas_leeg, schotel_leeg, tridem_leeg = 2800, 2000, 5200
         afstand_assen = 10200 - 1600
-
         aandeel_tridem = max(0.0, min(1.25, (zwaartepunt_mm - 1600) / afstand_assen))
-        aandeel_schotel = 1.0 - aandeel_tridem
-
-        schotel_druk = schotel_leeg + (totaal_lading_kg * aandeel_schotel)
+        schotel_druk = schotel_leeg + (totaal_lading_kg * (1.0 - aandeel_tridem))
         belasting_trekas = round(trekas_leeg + (schotel_druk * 0.72))
         belasting_tridem = round(tridem_leeg + (totaal_lading_kg * aandeel_tridem))
 
@@ -719,12 +676,7 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     st.write("💡 **Legenda:** Blauw=CP3 | Groen=CP7 600kg | Rood=CP7 750kg | Geel=IBC | Grijs=Maatwerk | FELROOD=Past Niet")
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=200, bbox_inches="tight")
-    st.download_button(
-        label="📸 Download Laadplan (Afbeelding)",
-        data=buf.getvalue(),
-        file_name="fons_laadplan.png",
-        mime="image/png"
-    )
+    st.download_button(label="📸 Download Laadplan (Afbeelding)", data=buf.getvalue(), file_name="fons_laadplan.png", mime="image/png")
 else:
     st.info("Container is leeg. Upload een PDF/foto-laadbon of gebruik de + en - knoppen om te beginnen.")
 
