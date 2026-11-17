@@ -675,9 +675,10 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     st.pyplot(fig, use_container_width=True)
 
     if max_lengte == 13550 and totaal_lading_kg > 0:
-        # Realistische verdeling 4x2 trekker + 3-assige huifoplegger (7.200 kg leeg):
-        # Schotel (kingpin op 1,60 m) geeft ~81% door aan de trekas en ~19% aan de stuuras vooraan.
-        trekas_leeg = 3400
+        # Realistische verdeling 4x2 trekker (~7.800 kg leeg: 5.000 vooras + 2.800 trekas)
+        # + 3-assige schuifzeiloplegger (~7.200 kg leeg: 2.000 schotel + 5.200 tridem)
+        # Van de totale schoteldruk gaat ~72% naar de trekas en ~28% naar de stuuras vooraan.
+        trekas_leeg = 2800
         schotel_leeg = 2000
         tridem_leeg = 5200
         afstand_assen = 10200 - 1600
@@ -686,7 +687,7 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
         aandeel_schotel = 1.0 - aandeel_tridem
 
         schotel_druk = schotel_leeg + (totaal_lading_kg * aandeel_schotel)
-        belasting_trekas = round(trekas_leeg + (schotel_druk * 0.81))
+        belasting_trekas = round(trekas_leeg + (schotel_druk * 0.72))
         belasting_tridem = round(tridem_leeg + (totaal_lading_kg * aandeel_tridem))
 
         ac1, ac2, ac3 = st.columns(3)
