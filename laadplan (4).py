@@ -313,10 +313,10 @@ product_info = {
 }
 
 pdf_d = st.session_state.pdf_data
-init_cp3 = (pdf_d["cp3_500"] + pdf_d["cp3_1000"]) if pdf_d else 0
-init_cp7_600 = pdf_d["cp7_600"] if pdf_d else 0
-init_cp7_750 = pdf_d["cp7_750"] if pdf_d else 0
-init_ibc = pdf_d["ibc"] if pdf_d else 0
+init_cp3 = (pdf_d["cp3_500"] + pdf_d["cp3_1000"]) if (pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"]) > 0) else None
+init_cp7_600 = pdf_d["cp7_600"] if (pdf_d and pdf_d["cp7_600"] > 0) else None
+init_cp7_750 = pdf_d["cp7_750"] if (pdf_d and pdf_d["cp7_750"] > 0) else None
+init_ibc = pdf_d["ibc"] if (pdf_d and pdf_d["ibc"] > 0) else None
 
 col_titel, col_wis = st.columns(2)
 with col_titel: st.write("### 2. Vul aantal pallets in:")
@@ -332,7 +332,8 @@ col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     st.markdown('<div class="custom-box" style="background-color:#3498db;">CP3 (1150x1150)</div>', unsafe_allow_html=True)
-    pallets_cp3 = st.number_input("Aantal CP3", min_value=0, value=init_cp3, step=1, key=f"cp3_{st.session_state.reset_id}", label_visibility="collapsed")
+    in_cp3 = st.number_input("Aantal CP3", min_value=0, value=init_cp3, placeholder="0", step=1, key=f"cp3_{st.session_state.reset_id}", label_visibility="collapsed")
+    pallets_cp3 = int(in_cp3) if in_cp3 is not None else 0
     if pallets_cp3 > 0:
         if "CP3" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP3")
         default_cp3_kg = 1000 if (pdf_d and pdf_d["cp3_1000"] > pdf_d["cp3_500"]) else 500
@@ -341,20 +342,24 @@ with col1:
 
 with col2:
     st.markdown('<div class="custom-box" style="background-color:#2ecc71;">CP7 600kg (1400x1100)</div>', unsafe_allow_html=True)
-    pallets_cp7_600_totaal = st.number_input("Aantal CP7 600", min_value=0, value=init_cp7_600, step=1, key=f"cp7_600_{st.session_state.reset_id}", label_visibility="collapsed")
+    in_cp7_600 = st.number_input("Aantal CP7 600", min_value=0, value=init_cp7_600, placeholder="0", step=1, key=f"cp7_600_{st.session_state.reset_id}", label_visibility="collapsed")
+    pallets_cp7_600_totaal = int(in_cp7_600) if in_cp7_600 is not None else 0
 
 with col3:
     st.markdown('<div class="custom-box" style="background-color:#e74c3c;">CP7 750kg (1400x1150)</div>', unsafe_allow_html=True)
-    pallets_cp7_750_totaal = st.number_input("Aantal CP7 750", min_value=0, value=init_cp7_750, step=1, key=f"cp7_750_{st.session_state.reset_id}", label_visibility="collapsed")
+    in_cp7_750 = st.number_input("Aantal CP7 750", min_value=0, value=init_cp7_750, placeholder="0", step=1, key=f"cp7_750_{st.session_state.reset_id}", label_visibility="collapsed")
+    pallets_cp7_750_totaal = int(in_cp7_750) if in_cp7_750 is not None else 0
 
 with col4:
     st.markdown('<div class="custom-box" style="background-color:#f1c40f; color:black;">IBC (1000x1200)</div>', unsafe_allow_html=True)
-    pallets_ibc = st.number_input("Aantal IBC", min_value=0, value=init_ibc, step=1, key=f"ibc_{st.session_state.reset_id}", label_visibility="collapsed")
+    in_ibc = st.number_input("Aantal IBC", min_value=0, value=init_ibc, placeholder="0", step=1, key=f"ibc_{st.session_state.reset_id}", label_visibility="collapsed")
+    pallets_ibc = int(in_ibc) if in_ibc is not None else 0
     if pallets_ibc > 0 and "IBC" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("IBC")
 
 with col5:
     st.markdown('<div class="custom-box" style="background-color:#7f8c8d;">Maatwerk 📐</div>', unsafe_allow_html=True)
-    pallets_mw = st.number_input("Aantal Maatwerk", min_value=0, value=0, step=1, key=f"mw_{st.session_state.reset_id}", label_visibility="collapsed")
+    in_mw = st.number_input("Aantal Maatwerk", min_value=0, value=None, placeholder="0", step=1, key=f"mw_{st.session_state.reset_id}", label_visibility="collapsed")
+    pallets_mw = int(in_mw) if in_mw is not None else 0
     if pallets_mw > 0:
         if "Maatwerk" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("Maatwerk")
         mw_L = st.number_input("L (mm):", min_value=1, value=1000, step=10, key=f"mw_l_{st.session_state.reset_id}")
@@ -365,7 +370,7 @@ with col5:
         product_info["Maatwerk"]["gewicht"] = mw_kg
 auto_aslast = False
 if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0:
-    auto_aslast = st.checkbox("⚖️ Automatisch optimaliseren op aslast & oppervlakte (uitzetten = handmatig aanpassen)", value=(pdf_d is not None))
+    auto_aslast = st.checkbox("⚖️ Automatisch optimaliseren op aslast & oppervlakte (alleen vooraan dwars als dit past in de lengte)", value=(pdf_d is not None))
 
 as_v_cp3, as_a_cp3 = 0, 0
 as_v_cp7_600, as_a_cp7_600 = 0, 0
@@ -373,64 +378,52 @@ as_v_cp7_750, as_a_cp7_750 = 0, 0
 as_v_ibc, as_a_ibc = 0, 0
 as_v_mw, as_a_mw = 0, 0
 
-c_v_cp3, c_a_cp3 = False, False
-c_v_cp7_600, c_a_cp7_600 = False, False
-c_v_cp7_750, c_a_cp7_750 = False, False
-c_v_ibc, c_a_ibc = False, False
-c_v_mw, c_a_mw = False, False
-
 richting_v_cp7_600 = "Lang (1400x1100)"
 richting_a_cp7_600 = "Lang (1400x1100)"
 richting_v_cp7_750 = "Lang (1400x1150)"
 richting_a_cp7_750 = "Lang (1400x1150)"
 
 if not auto_aslast and (pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0):
-    with st.expander("🛠️ Handmatig aanpassen (pallets vooraan VOR / achteraan ACH + Centraal per soort)", expanded=True):
+    with st.expander("⚖️ Klik hier voor handmatige aslast-regelingen (Midden vooraan/achteraan)"):
         v_col1, v_col2, v_col3, v_col4, v_col5 = st.columns(5)
         with v_col1:
             if pallets_cp3 > 0:
-                as_v_cp3 = st.number_input("CP3 VOR", min_value=0, max_value=pallets_cp3, value=0, step=1, key=f"v_cp3_{st.session_state.reset_id}")
-                if as_v_cp3 > 0:
-                    c_v_cp3 = st.checkbox("Centraal (CP3 VOR)", key=f"cv_cp3_{st.session_state.reset_id}")
-                as_a_cp3 = st.number_input("CP3 ACH", min_value=0, max_value=pallets_cp3 - as_v_cp3, value=0, step=1, key=f"a_cp3_{st.session_state.reset_id}")
-                if as_a_cp3 > 0:
-                    c_a_cp3 = st.checkbox("Centraal (CP3 ACH)", key=f"ca_cp3_{st.session_state.reset_id}")
+                v_c3 = st.number_input("CP3 VOR", min_value=0, max_value=pallets_cp3, value=None, placeholder="0", step=1, key=f"v_cp3_{st.session_state.reset_id}")
+                as_v_cp3 = int(v_c3) if v_c3 is not None else 0
+                a_c3 = st.number_input("CP3 ACH", min_value=0, max_value=pallets_cp3 - as_v_cp3, value=None, placeholder="0", step=1, key=f"a_cp3_{st.session_state.reset_id}")
+                as_a_cp3 = int(a_c3) if a_c3 is not None else 0
         with v_col2:
             if pallets_cp7_600_totaal > 0:
-                as_v_cp7_600 = st.number_input("CP7 600 VOR", min_value=0, max_value=pallets_cp7_600_totaal, value=0, step=1, key=f"v_cp7_600_{st.session_state.reset_id}")
+                v_600 = st.number_input("CP7 600 VOR", min_value=0, max_value=pallets_cp7_600_totaal, value=None, placeholder="0", step=1, key=f"v_cp7_600_{st.session_state.reset_id}")
+                as_v_cp7_600 = int(v_600) if v_600 is not None else 0
                 if as_v_cp7_600 > 0:
-                    c_v_cp7_600 = st.checkbox("Centraal (600 VOR)", key=f"cv_600_{st.session_state.reset_id}")
                     richting_v_cp7_600 = st.radio("Richting VOR (600):", ["Lang (1400x1100)", "Smal (1100x1400)"], key=f"r_v_cp7_600_{st.session_state.reset_id}")
-                as_a_cp7_600 = st.number_input("CP7 600 ACH", min_value=0, max_value=pallets_cp7_600_totaal - as_v_cp7_600, value=0, step=1, key=f"a_cp7_600_{st.session_state.reset_id}")
+                a_600 = st.number_input("CP7 600 ACH", min_value=0, max_value=pallets_cp7_600_totaal - as_v_cp7_600, value=None, placeholder="0", step=1, key=f"a_cp7_600_{st.session_state.reset_id}")
+                as_a_cp7_600 = int(a_600) if a_600 is not None else 0
                 if as_a_cp7_600 > 0:
-                    c_a_cp7_600 = st.checkbox("Centraal (600 ACH)", key=f"ca_600_{st.session_state.reset_id}")
                     richting_a_cp7_600 = st.radio("Richting ACH (600):", ["Lang (1400x1100)", "Smal (1100x1400)"], key=f"r_a_cp7_600_{st.session_state.reset_id}")
         with v_col3:
             if pallets_cp7_750_totaal > 0:
-                as_v_cp7_750 = st.number_input("CP7 750 VOR", min_value=0, max_value=pallets_cp7_750_totaal, value=0, step=1, key=f"v_cp7_750_{st.session_state.reset_id}")
+                v_750 = st.number_input("CP7 750 VOR", min_value=0, max_value=pallets_cp7_750_totaal, value=None, placeholder="0", step=1, key=f"v_cp7_750_{st.session_state.reset_id}")
+                as_v_cp7_750 = int(v_750) if v_750 is not None else 0
                 if as_v_cp7_750 > 0:
-                    c_v_cp7_750 = st.checkbox("Centraal (750 VOR)", key=f"cv_750_{st.session_state.reset_id}")
                     richting_v_cp7_750 = st.radio("Richting VOR (750):", ["Lang (1400x1150)", "Smal (1150x1400)"], key=f"r_v_cp7_750_{st.session_state.reset_id}")
-                as_a_cp7_750 = st.number_input("CP7 750 ACH", min_value=0, max_value=pallets_cp7_750_totaal - as_v_cp7_750, value=0, step=1, key=f"a_cp7_750_{st.session_state.reset_id}")
+                a_750 = st.number_input("CP7 750 ACH", min_value=0, max_value=pallets_cp7_750_totaal - as_v_cp7_750, value=None, placeholder="0", step=1, key=f"a_cp7_750_{st.session_state.reset_id}")
+                as_a_cp7_750 = int(a_750) if a_750 is not None else 0
                 if as_a_cp7_750 > 0:
-                    c_a_cp7_750 = st.checkbox("Centraal (750 ACH)", key=f"ca_750_{st.session_state.reset_id}")
                     richting_a_cp7_750 = st.radio("Richting ACH (750):", ["Lang (1400x1150)", "Smal (1150x1400)"], key=f"r_a_cp7_750_{st.session_state.reset_id}")
         with v_col4:
             if pallets_ibc > 0:
-                as_v_ibc = st.number_input("IBC VOR", min_value=0, max_value=pallets_ibc, value=0, step=1, key=f"v_ibc_{st.session_state.reset_id}")
-                if as_v_ibc > 0:
-                    c_v_ibc = st.checkbox("Centraal (IBC VOR)", key=f"cv_ibc_{st.session_state.reset_id}")
-                as_a_ibc = st.number_input("IBC ACH", min_value=0, max_value=pallets_ibc - as_v_ibc, value=0, step=1, key=f"a_ibc_{st.session_state.reset_id}")
-                if as_a_ibc > 0:
-                    c_a_ibc = st.checkbox("Centraal (IBC ACH)", key=f"ca_ibc_{st.session_state.reset_id}")
+                v_ib = st.number_input("IBC VOR", min_value=0, max_value=pallets_ibc, value=None, placeholder="0", step=1, key=f"v_ibc_{st.session_state.reset_id}")
+                as_v_ibc = int(v_ib) if v_ib is not None else 0
+                a_ib = st.number_input("IBC ACH", min_value=0, max_value=pallets_ibc - as_v_ibc, value=None, placeholder="0", step=1, key=f"a_ibc_{st.session_state.reset_id}")
+                as_a_ibc = int(a_ib) if a_ib is not None else 0
         with v_col5:
             if pallets_mw > 0:
-                as_v_mw = st.number_input("MW VOR", min_value=0, max_value=pallets_mw, value=0, step=1, key=f"v_mw_{st.session_state.reset_id}")
-                if as_v_mw > 0:
-                    c_v_mw = st.checkbox("Centraal (MW VOR)", key=f"cv_mw_{st.session_state.reset_id}")
-                as_a_mw = st.number_input("MW ACH", min_value=0, max_value=pallets_mw - as_v_mw, value=0, step=1, key=f"a_mw_{st.session_state.reset_id}")
-                if as_a_mw > 0:
-                    c_a_mw = st.checkbox("Centraal (MW ACH)", key=f"ca_mw_{st.session_state.reset_id}")
+                v_mw = st.number_input("MW VOR", min_value=0, max_value=pallets_mw, value=None, placeholder="0", step=1, key=f"v_mw_{st.session_state.reset_id}")
+                as_v_mw = int(v_mw) if v_mw is not None else 0
+                a_mw = st.number_input("MW ACH", min_value=0, max_value=pallets_mw - as_v_mw, value=None, placeholder="0", step=1, key=f"a_mw_{st.session_state.reset_id}")
+                as_a_mw = int(a_mw) if a_mw is not None else 0
 hoofd_cp7_600 = max(0, pallets_cp7_600_totaal - as_v_cp7_600 - as_a_cp7_600)
 if pallets_cp7_600_totaal > 0 and "CP7_600" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP7_600")
 
@@ -445,6 +438,7 @@ with col3:
 hoofd_cp3 = max(0, pallets_cp3 - as_v_cp3 - as_a_cp3)
 hoofd_ibc = max(0, pallets_ibc - as_v_ibc - as_a_ibc)
 hoofd_mw = max(0, pallets_mw - as_v_mw - as_a_mw)
+actuele_aantallen = {"CP3": hoofd_cp3, "CP7_600": hoofd_cp7_600, "CP7_750": hoofd_cp7_750, "IBC": hoofd_ibc, "Maatwerk": hoofd_mw}
 
 laad_lijst = []
 
@@ -455,7 +449,7 @@ def haal_pallet_kleur(art_naam, overgebleven, standaard_kleur):
         return "#c0392b" if overgebleven >= 2 else "#ff7675"
     return standaard_kleur
 
-def voeg_partij_toe_aslast(art_naam, aantal, richting, override_kg=None, centraal=True):
+def voeg_partij_toe_aslast(art_naam, aantal, richting, override_kg=None):
     if aantal > 0:
         info = product_info[art_naam].copy()
         stuk_kg = override_kg if override_kg is not None else info["gewicht"]
@@ -473,7 +467,7 @@ def voeg_partij_toe_aslast(art_naam, aantal, richting, override_kg=None, centraa
             laad_lijst.append({
                 "naam": f"{info['label']}{h_label}", "naam_puur": art_naam,
                 "L": info["lengte"], "B": info["breedte"], "kleur": gekozen_kleur,
-                "force_midden": centraal, "kg": stapel_kg
+                "force_midden": True, "kg": stapel_kg
             })
 
 def voeg_partij_toe(art_naam, aantal, dwars=False, override_kg=None):
@@ -495,89 +489,71 @@ def voeg_partij_toe(art_naam, aantal, dwars=False, override_kg=None):
                 "L": info["lengte"], "B": info["breedte"], "kleur": gekozen_kleur,
                 "force_midden": False, "kg": stapel_kg
             })
-def plaats_geoptimaliseerde_reeks(aant_600, aant_750, aant_cp3, aant_mw, aant_ibc, sta_dwars_voor_toe=True):
-    rest_600 = aant_600
-    rest_750 = aant_750
+if auto_aslast:
+    rest_600 = pallets_cp7_600_totaal
+    rest_750 = pallets_cp7_750_totaal
 
     vloer_600 = math.ceil(rest_600 / 2)
     vloer_750 = math.ceil(rest_750 / 2)
     totaal_cp7_vloer = vloer_600 + vloer_750
 
     lengte_cp7_normaal = math.ceil(totaal_cp7_vloer / 2) * 1400
-    lengte_cp3_normaal = math.ceil(aant_cp3 / 2) * 1150
-    lengte_ibc_normaal = math.ceil(aant_ibc / 2) * (1100 if max_breedte == 2350 else 1000)
-    lengte_mw_normaal = math.ceil(aant_mw / 2) * product_info["Maatwerk"]["lengte"]
+    lengte_cp3_normaal = math.ceil(pallets_cp3 / 2) * 1150
+    lengte_ibc_normaal = math.ceil(pallets_ibc / 2) * (1100 if max_breedte == 2350 else 1000)
+    lengte_mw_normaal = math.ceil(pallets_mw / 2) * product_info["Maatwerk"]["lengte"]
     geschatte_lengte_normaal = lengte_cp7_normaal + lengte_cp3_normaal + lengte_ibc_normaal + lengte_mw_normaal
 
-    mag_enkele_dwars = sta_dwars_voor_toe and (totaal_cp7_vloer % 2 == 1) and (geschatte_lengte_normaal + 1150 <= max_lengte)
-    richting_600 = "Smal (1100x1400)" if mag_enkele_dwars else "Lang (1400x1100)"
-    richting_750 = "Smal (1150x1400)" if mag_enkele_dwars else "Lang (1400x1150)"
+    mag_enkele_dwars = (totaal_cp7_vloer % 2 == 1) and (geschatte_lengte_normaal + 1150 <= max_lengte)
 
-    if sta_dwars_voor_toe and rest_750 >= 36 and rest_600 == 0 and aant_cp3 == 0 and aant_ibc == 0 and max_lengte == 13550:
-        voeg_partij_toe_aslast("CP7_750", 4, "Smal (1150x1400)", centraal=True)
+    if rest_750 >= 36 and rest_600 == 0 and pallets_cp3 == 0 and pallets_ibc == 0 and max_lengte == 13550:
+        voeg_partij_toe_aslast("CP7_750", 4, "Smal (1150x1400)")
         rest_750 -= 4
-    elif sta_dwars_voor_toe and rest_600 >= 36 and rest_750 == 0 and aant_cp3 == 0 and aant_ibc == 0 and max_lengte == 13550:
-        voeg_partij_toe_aslast("CP7_600", 4, "Smal (1100x1400)", centraal=True)
+        vloer_750 = math.ceil(rest_750 / 2)
+    elif rest_600 >= 36 and rest_750 == 0 and pallets_cp3 == 0 and pallets_ibc == 0 and max_lengte == 13550:
+        voeg_partij_toe_aslast("CP7_600", 4, "Smal (1100x1400)")
         rest_600 -= 4
-    elif totaal_cp7_vloer % 2 == 1:
+        vloer_600 = math.ceil(rest_600 / 2)
+    elif mag_enkele_dwars:
         if vloer_600 % 2 == 1 and rest_600 > 0:
             enkele_600 = 1 if rest_600 % 2 == 1 else 2
-            voeg_partij_toe_aslast("CP7_600", enkele_600, richting_600, centraal=True)
+            voeg_partij_toe_aslast("CP7_600", enkele_600, "Smal (1100x1400)")
             rest_600 -= enkele_600
         elif vloer_750 % 2 == 1 and rest_750 > 0:
             enkele_750 = 1 if rest_750 % 2 == 1 else 2
-            voeg_partij_toe_aslast("CP7_750", enkele_750, richting_750, centraal=True)
+            voeg_partij_toe_aslast("CP7_750", enkele_750, "Smal (1150x1400)")
             rest_750 -= enkele_750
 
+    heeft_pdf_cp3 = pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3)
+    cp3_licht = pdf_d["cp3_500"] if heeft_pdf_cp3 else (pallets_cp3 if product_info["CP3"]["gewicht"] == 500 else 0)
+    cp3_zwaar = pdf_d["cp3_1000"] if heeft_pdf_cp3 else (pallets_cp3 if product_info["CP3"]["gewicht"] == 1000 else 0)
+
+    cp3_licht_voor = (cp3_licht // 4) * 2
+    if cp3_licht_voor == 0 and cp3_licht >= 2:
+        cp3_licht_voor = 2
+    cp3_licht_achter = max(0, cp3_licht - cp3_licht_voor)
+
+    voeg_partij_toe("CP3", cp3_licht_voor, override_kg=500)
     voeg_partij_toe("CP7_600", rest_600)
     voeg_partij_toe("CP7_750", rest_750)
-
-    heeft_pdf_cp3 = pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3)
-    if heeft_pdf_cp3 and pallets_cp3 > 0:
-        cp3_zwaar = min(aant_cp3, pdf_d["cp3_1000"])
-        cp3_licht = max(0, aant_cp3 - cp3_zwaar)
-    else:
-        cp3_zwaar = aant_cp3 if product_info["CP3"]["gewicht"] == 1000 else 0
-        cp3_licht = aant_cp3 if product_info["CP3"]["gewicht"] == 500 else 0
-
     voeg_partij_toe("CP3", cp3_zwaar, override_kg=1000)
-    voeg_partij_toe("CP3", cp3_licht, override_kg=500)
-    voeg_partij_toe("Maatwerk", aant_mw)
-    voeg_partij_toe("IBC", aant_ibc)
-
-if auto_aslast:
-    plaats_geoptimaliseerde_reeks(pallets_cp7_600_totaal, pallets_cp7_750_totaal, pallets_cp3, pallets_mw, pallets_ibc, sta_dwars_voor_toe=True)
+    voeg_partij_toe("IBC", pallets_ibc)
+    voeg_partij_toe("Maatwerk", pallets_mw)
+    voeg_partij_toe("CP3", cp3_licht_achter, override_kg=500)
 else:
-    voor_items = [
-        ("CP7_600", as_v_cp7_600, richting_v_cp7_600, c_v_cp7_600),
-        ("CP7_750", as_v_cp7_750, richting_v_cp7_750, c_v_cp7_750),
-        ("CP3", as_v_cp3, "Lang", c_v_cp3),
-        ("IBC", as_v_ibc, "Lang", c_v_ibc),
-        ("Maatwerk", as_v_mw, "Lang", c_v_mw),
-    ]
-    for art, aantal, richt, is_centr in voor_items:
-        if aantal > 0 and is_centr:
-            voeg_partij_toe_aslast(art, aantal, richt, centraal=True)
-    for art, aantal, richt, is_centr in voor_items:
-        if aantal > 0 and not is_centr:
-            voeg_partij_toe_aslast(art, aantal, richt, centraal=False)
+    voeg_partij_toe_aslast("CP3", as_v_cp3, "Lang")
+    voeg_partij_toe_aslast("CP7_600", as_v_cp7_600, richting_v_cp7_600)
+    voeg_partij_toe_aslast("CP7_750", as_v_cp7_750, richting_v_cp7_750)
+    voeg_partij_toe_aslast("IBC", as_v_ibc, "Lang")
+    voeg_partij_toe_aslast("Maatwerk", as_v_mw, "Lang")
 
-    heeft_handmatige_vor = (as_v_cp3 + as_v_cp7_600 + as_v_cp7_750 + as_v_ibc + as_v_mw) > 0
-    plaats_geoptimaliseerde_reeks(hoofd_cp7_600, hoofd_cp7_750, hoofd_cp3, hoofd_mw, hoofd_ibc, sta_dwars_voor_toe=(not heeft_handmatige_vor))
+    for art_naam in st.session_state.klik_volgorde:
+        if art_naam in actuele_aantallen: voeg_partij_toe(art_naam, actuele_aantallen[art_naam])
 
-    achter_items = [
-        ("CP3", as_a_cp3, "Lang", c_a_cp3),
-        ("CP7_600", as_a_cp7_600, richting_a_cp7_600, c_a_cp7_600),
-        ("CP7_750", as_a_cp7_750, richting_a_cp7_750, c_a_cp7_750),
-        ("IBC", as_a_ibc, "Lang", c_a_ibc),
-        ("Maatwerk", as_a_mw, "Lang", c_a_mw),
-    ]
-    for art, aantal, richt, is_centr in achter_items:
-        if aantal > 0 and not is_centr:
-            voeg_partij_toe_aslast(art, aantal, richt, centraal=False)
-    for art, aantal, richt, is_centr in achter_items:
-        if aantal > 0 and is_centr:
-            voeg_partij_toe_aslast(art, aantal, richt, centraal=True)
+    voeg_partij_toe_aslast("CP3", as_a_cp3, "Lang")
+    voeg_partij_toe_aslast("CP7_600", as_a_cp7_600, richting_a_cp7_600)
+    voeg_partij_toe_aslast("CP7_750", as_a_cp7_750, richting_a_cp7_750)
+    voeg_partij_toe_aslast("IBC", as_a_ibc, "Lang")
+    voeg_partij_toe_aslast("Maatwerk", as_a_mw, "Lang")
 fig, ax = plt.subplots(figsize=(15, 4.1))
 ax.set_xlim(0, max_lengte)
 ax.set_ylim(-650 if max_lengte == 13550 else -200, max_breedte + 180)
@@ -592,23 +568,20 @@ ax.text(max_lengte - 80, max_breedte + 45, f"DEUREN ({max_lengte / 1000:.2f} m) 
 
 geplaatste_blokken = []
 x_onder, x_boven, ibc_paar_teller, idx = 0, 0, 0, 0
-breedte_op_onder = 0
-breedte_op_boven = 0
 
 while idx < len(laad_lijst):
     item = laad_lijst[idx]
-    tekst_grootte = 7.5
+    tekst_grootte = 9
     tekst_weergave = f"{item['naam']}\n{item['kg']} kg"
 
     if item["force_midden"]:
         start_x = max(x_onder, x_boven)
-        vulling_kleur = "#ff0000" if (start_x + item["L"] > max_lengte or item["B"] > max_breedte) else item["kleur"]
+        vulling_kleur = "#ff0000" if (start_x + item["L"] > max_lengte) else item["kleur"]
         y_pos = (max_breedte - item["B"]) / 2
         ax.add_patch(patches.Rectangle((start_x, y_pos), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85))
-        ax.text(start_x + (item["L"]/2), y_pos + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam_puur"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
+        ax.text(start_x + (item["L"]/2), y_pos + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         geplaatste_blokken.append({"x_mid": start_x + (item["L"] / 2), "kg": item["kg"]})
         x_onder, x_boven = start_x + item["L"], start_x + item["L"]
-        breedte_op_onder, breedte_op_boven = 0, 0
         idx += 1
         continue
 
@@ -620,54 +593,42 @@ while idx < len(laad_lijst):
                 x_pos_onder = max(x_onder, x_boven) if ibc_paar_teller == 0 else x_onder
                 vulling_kleur1 = "#ff0000" if (x_pos_onder + 1000 > max_lengte) else item["kleur"]
                 ax.add_patch(patches.Rectangle((x_pos_onder, 20), 1000, 1200, linewidth=1, edgecolor='white', facecolor=vulling_kleur1, alpha=0.85))
-                ax.text(x_pos_onder + 500, 20 + 600, f"IBC (B)\n{kg_1} kg", color="black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
+                ax.text(x_pos_onder + 500, 20 + 600, f"IBC (Breed)\n{kg_1} kg", color="black", weight="bold", ha="center", va="center", fontsize=9.5)
                 geplaatste_blokken.append({"x_mid": x_pos_onder + 500, "kg": kg_1})
 
                 x_pos_boven = max(x_onder, x_boven) if ibc_paar_teller == 0 else x_boven
                 vulling_kleur2 = "#ff0000" if (x_pos_boven + 1200 > max_lengte) else item["kleur"]
                 ax.add_patch(patches.Rectangle((x_pos_boven, max_breedte - 1000 - 20), 1200, 1000, linewidth=1, edgecolor='white', facecolor=vulling_kleur2, alpha=0.85))
-                ax.text(x_pos_boven + 600, max_breedte - 1000 - 20 + 500, f"IBC (L)\n{kg_2} kg", color="black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
+                ax.text(x_pos_boven + 600, max_breedte - 1000 - 20 + 500, f"IBC (Lang)\n{kg_2} kg", color="black", weight="bold", ha="center", va="center", fontsize=9.5)
                 geplaatste_blokken.append({"x_mid": x_pos_boven + 600, "kg": kg_2})
 
                 x_onder, x_boven = x_pos_onder + 1000, x_pos_boven + 1200
-                breedte_op_onder, breedte_op_boven = 1200, 1000
             else:
                 vulling_kleur1 = "#ff0000" if (x_onder + 1200 > max_lengte) else item["kleur"]
                 ax.add_patch(patches.Rectangle((x_onder, 20), 1200, 1000, linewidth=1, edgecolor='white', facecolor=vulling_kleur1, alpha=0.85))
-                ax.text(x_onder + 600, 20 + 500, f"IBC (L)\n{kg_1} kg", color="black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
+                ax.text(x_onder + 600, 20 + 500, f"IBC (Lang)\n{kg_1} kg", color="black", weight="bold", ha="center", va="center", fontsize=9.5)
                 geplaatste_blokken.append({"x_mid": x_onder + 600, "kg": kg_1})
 
                 vulling_kleur2 = "#ff0000" if (x_boven + 1000 > max_lengte) else item["kleur"]
                 ax.add_patch(patches.Rectangle((x_boven, max_breedte - 1200 - 20), 1000, 1200, linewidth=1, edgecolor='white', facecolor=vulling_kleur2, alpha=0.85))
-                ax.text(x_boven + 500, max_breedte - 1200 - 20 + 600, f"IBC (B)\n{kg_2} kg", color="black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
+                ax.text(x_boven + 500, max_breedte - 1200 - 20 + 600, f"IBC (Breed)\n{kg_2} kg", color="black", weight="bold", ha="center", va="center", fontsize=9.5)
                 geplaatste_blokken.append({"x_mid": x_boven + 500, "kg": kg_2})
 
                 x_onder, x_boven = x_onder + 1200, x_boven + 1000
-                breedte_op_onder, breedte_op_boven = 1000, 1200
             ibc_paar_teller += 1; idx += 2; continue
 
     if x_onder <= x_boven:
-        if x_onder < x_boven and (item["B"] + breedte_op_boven > max_breedte):
-            x_onder = x_boven
-            breedte_op_onder = 0
-
-        vulling_kleur = "#ff0000" if (x_onder + item["L"] > max_lengte or item["B"] > max_breedte) else item["kleur"]
+        vulling_kleur = "#ff0000" if (x_onder + item["L"] > max_lengte) else item["kleur"]
         ax.add_patch(patches.Rectangle((x_onder, 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85))
-        ax.text(x_onder + (item["L"]/2), 20 + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam_puur"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
+        ax.text(x_onder + (item["L"]/2), 20 + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         geplaatste_blokken.append({"x_mid": x_onder + (item["L"] / 2), "kg": item["kg"]})
         x_onder += item["L"]
-        breedte_op_onder = item["B"]
     else:
-        if x_boven < x_onder and (item["B"] + breedte_op_onder > max_breedte):
-            x_boven = x_onder
-            breedte_op_boven = 0
-
-        vulling_kleur = "#ff0000" if (x_boven + item["L"] > max_lengte or item["B"] > max_breedte) else item["kleur"]
+        vulling_kleur = "#ff0000" if (x_boven + item["L"] > max_lengte) else item["kleur"]
         ax.add_patch(patches.Rectangle((x_boven, max_breedte - item["B"] - 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85))
-        ax.text(x_boven + (item["L"]/2), max_breedte - item["B"] - 20 + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam_puur"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
+        ax.text(x_boven + (item["L"]/2), max_breedte - item["B"] - 20 + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         geplaatste_blokken.append({"x_mid": x_boven + (item["L"] / 2), "kg": item["kg"]})
         x_boven += item["L"]
-        breedte_op_boven = item["B"]
     idx += 1
 totaal_lading_kg = sum(b["kg"] for b in geplaatste_blokken)
 zwaartepunt_mm = (sum(b["x_mid"] * b["kg"] for b in geplaatste_blokken) / totaal_lading_kg) if totaal_lading_kg > 0 else 0
@@ -723,10 +684,8 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
     st.write("💡 **Legenda:** Blauw=CP3 | Groen=CP7 600kg | Rood=CP7 750kg | Geel=IBC | Grijs=Maatwerk | FELROOD=Past Niet")
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=200, bbox_inches="tight")
-    plt.close(fig)
     st.download_button(label="📸 Download Laadplan (Afbeelding)", data=buf.getvalue(), file_name="fons_laadplan.png", mime="image/png")
 else:
-    plt.close(fig)
     st.info("Container is leeg. Upload een PDF/foto-laadbon of gebruik de + en - knoppen om te beginnen.")
 
 st.divider()
