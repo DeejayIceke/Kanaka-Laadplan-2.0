@@ -545,19 +545,30 @@ if auto_aslast:
     else:
         def bouw_auto_lijst(d_750, e_750, d_600, e_600):
             lijst = []
-            # 1. Dubbele stapels (2H) eerst tegen het kopschot
+            totaal_dubbel = d_750 + d_600
+
+            # 1. Als het aantal dubbele stapels (2H) oneven is: zet 1 dubbele stapel centraal tegen het kopschot
+            if totaal_dubbel % 2 == 1:
+                if d_600 > 0:
+                    d_600 -= 1
+                    lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": True, "kg": 1200})
+                elif d_750 > 0:
+                    d_750 -= 1
+                    lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": True, "kg": 1500})
+
+            # 2. Overige dubbele stapels (2H) in paren naast elkaar daarachter
             for _ in range(d_750):
                 lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "kg": 1500})
             for _ in range(d_600):
                 lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": False, "kg": 1200})
 
-            # 2. Alle enkele stapels (1H) direct daarna (zodat alle CP7's samen blijven!)
+            # 3. Alle enkele stapels (1H) direct daarna (zodat alle CP7's samen blijven)
             for _ in range(e_750):
                 lijst.append({"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#ff7675", "force_midden": False, "kg": 750})
             for _ in range(e_600):
                 lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#2ecc71", "force_midden": False, "kg": 600})
 
-            # 3. Overige producten (CP3, Maatwerk, IBC)
+            # 4. Overige producten (CP3, Maatwerk, IBC)
             heeft_pdf_cp3 = pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3)
             cp3_licht = pdf_d["cp3_500"] if heeft_pdf_cp3 else (pallets_cp3 if product_info["CP3"]["gewicht"] == 500 else 0)
             cp3_zwaar = pdf_d["cp3_1000"] if heeft_pdf_cp3 else (pallets_cp3 if product_info["CP3"]["gewicht"] == 1000 else 0)
@@ -574,11 +585,16 @@ if auto_aslast:
 
             return lijst
 
-
         def bereken_totale_lengte(lijst):
             xo, xb, bo, bb, ibc_t, i = 0, 0, 0, 0, 0, 0
             while i < len(lijst):
                 it = lijst[i]
+                if it.get("force_midden"):
+                    start_x = max(xo, xb)
+                    xo, xb = start_x + it["L"], start_x + it["L"]
+                    bo, bb = 0, 0
+                    i += 1
+                    continue
                 if max_breedte == 2350 and it["naam_puur"] == "IBC" and (i + 1 < len(lijst) and lijst[i + 1]["naam_puur"] == "IBC"):
                     if ibc_t % 2 == 0:
                         xo = (max(xo, xb) if ibc_t == 0 else xo) + 1000
@@ -610,7 +626,7 @@ if auto_aslast:
         dubbel_750 = rest_750 // 2
         enkel_750 = rest_750 % 2
 
-        # Halveer dubbele stapels zolang de totale lengte (incl. doorschuiven) binnen max_lengte blijft
+        # Halveer dubbele stapels zolang de totale lengte (incl. evt. centrale 2H) binnen max_lengte blijft
         while (dubbel_600 + dubbel_750) > 0:
             if dubbel_750 > 0:
                 kandidaat = bouw_auto_lijst(dubbel_750 - 1, enkel_750 + 2, dubbel_600, enkel_600)
@@ -626,16 +642,8 @@ if auto_aslast:
                     continue
             break
 
-        # Voorkom dat 1 enkele dubbele stapel (2H) naast een lage (1H) komt te staan
-        if (dubbel_600 + dubbel_750) % 2 == 1 and (enkel_600 + enkel_750) > 0:
-            if enkel_750 >= 2:
-                enkel_750 -= 2
-                dubbel_750 += 1
-            elif enkel_600 >= 2:
-                enkel_600 -= 2
-                dubbel_600 += 1
-
         laad_lijst.extend(bouw_auto_lijst(dubbel_750, enkel_750, dubbel_600, enkel_600))
+
 
 
 else:
