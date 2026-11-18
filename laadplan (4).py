@@ -682,8 +682,19 @@ else:
                 continue
         break
 
+    # Voorkom dat 1 enkele dubbele stapel (2H) naast een lage (1H) komt als er VOR-items voor staan
+    heeft_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw) > 0
+    if heeft_voor and (dubbel_750 + dubbel_600 + mix_stapel) % 2 == 1 and (enkel_750 + enkel_600) > 0:
+        if enkel_750 >= 2:
+            enkel_750 -= 2
+            dubbel_750 += 1
+        elif enkel_600 >= 2:
+            enkel_600 -= 2
+            dubbel_600 += 1
+
     laad_lijst.extend(bouw_auto_lijst(dubbel_750, enkel_750, dubbel_600, enkel_600, mix_stapel))
     laad_lijst.extend(achter_lijst)
+
 fig, ax = plt.subplots(figsize=(15, 4.1))
 ax.set_xlim(0, max_lengte)
 ax.set_ylim(-650 if max_lengte == 13550 else -200, max_breedte + 180)
