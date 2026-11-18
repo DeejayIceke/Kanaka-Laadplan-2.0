@@ -668,17 +668,17 @@ else:
             mix_stapel = 1
 
     while (dubbel_600 + dubbel_750) > 0:
-        if dubbel_600 > 0:
-            kandidaat = laad_lijst + bouw_auto_lijst(dubbel_750, enkel_750, dubbel_600 - 1, enkel_600 + 2, mix_stapel) + achter_lijst
-            if bereken_totale_lengte(kandidaat) <= max_lengte:
-                dubbel_600 -= 1
-                enkel_600 += 2
-                continue
         if dubbel_750 > 0:
             kandidaat = laad_lijst + bouw_auto_lijst(dubbel_750 - 1, enkel_750 + 2, dubbel_600, enkel_600, mix_stapel) + achter_lijst
             if bereken_totale_lengte(kandidaat) <= max_lengte:
                 dubbel_750 -= 1
                 enkel_750 += 2
+                continue
+        if dubbel_600 > 0:
+            kandidaat = laad_lijst + bouw_auto_lijst(dubbel_750, enkel_750, dubbel_600 - 1, enkel_600 + 2, mix_stapel) + achter_lijst
+            if bereken_totale_lengte(kandidaat) <= max_lengte:
+                dubbel_600 -= 1
+                enkel_600 += 2
                 continue
         break
 
