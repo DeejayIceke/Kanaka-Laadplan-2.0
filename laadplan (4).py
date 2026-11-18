@@ -559,19 +559,20 @@ if auto_aslast:
                     d_750 -= 1
                     lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": True, "kg": 1500})
 
-            # 2. Overige dubbele stapels (2H) in paren naast elkaar daarachter
-            for _ in range(d_750):
-                lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "kg": 1500})
-            for _ in range(mix_600_op_750):
-                lijst.append({"naam": "CP7 600 op 750", "naam_puur": "CP7_MIX", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "kg": 1350})
+            # 2. Overige dubbele stapels (2H) in paren naast elkaar (eerst 600, dan mix, dan 750)
             for _ in range(d_600):
                 lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": False, "kg": 1200})
+            for _ in range(mix_600_op_750):
+                lijst.append({"naam": "CP7 600 op 750", "naam_puur": "CP7_MIX", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "kg": 1350})
+            for _ in range(d_750):
+                lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "kg": 1500})
 
-            # 3. Alle enkele stapels (1H) direct daarna
-            for _ in range(e_750):
-                lijst.append({"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#ff7675", "force_midden": False, "kg": 750})
+            # 3. Alle enkele stapels (1H) direct daarna (eerst 600, dan 750)
             for _ in range(e_600):
                 lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#2ecc71", "force_midden": False, "kg": 600})
+            for _ in range(e_750):
+                lijst.append({"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#ff7675", "force_midden": False, "kg": 750})
+
 
             # 4. Overige producten (CP3, Maatwerk, IBC)
             heeft_pdf_cp3 = pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3)
