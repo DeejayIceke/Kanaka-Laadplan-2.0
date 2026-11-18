@@ -463,7 +463,6 @@ if handmatig_modus and (pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_t
                 as_a_mw = st.number_input("MW ACH", min_value=0, max_value=pallets_mw - as_v_mw, value=0, step=1, key=f"a_mw_{st.session_state.reset_id}") or 0
                 if as_a_mw > 0:
                     c_a_mw = (st.radio("MW ACH plaatsing:", ("Naast elkaar", "Centraal"), key=f"ca_mw_{st.session_state.reset_id}") == "Centraal")
-
 hoofd_cp7_600 = max(0, pallets_cp7_600_totaal - as_v_cp7_600 - as_a_cp7_600)
 if pallets_cp7_600_totaal > 0 and "CP7_600" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP7_600")
 
@@ -478,7 +477,6 @@ with col3:
 hoofd_cp3 = max(0, pallets_cp3 - as_v_cp3 - as_a_cp3)
 hoofd_ibc = max(0, pallets_ibc - as_v_ibc - as_a_ibc)
 hoofd_mw = max(0, pallets_mw - as_v_mw - as_a_mw)
-actuele_aantallen = {"CP3": hoofd_cp3, "CP7_600": hoofd_cp7_600, "CP7_750": hoofd_cp7_750, "IBC": hoofd_ibc, "Maatwerk": hoofd_mw}
 
 laad_lijst = []
 
@@ -683,7 +681,6 @@ else:
                 voeg_partij_toe_aslast(art, aantal, richt, centraal=True)
         achter_lijst = laad_lijst
         laad_lijst = tijdelijk_laad
-
     def bereken_variant(cp3_voor=0, dwars_600=0):
         d6 = max(0, (rest_600 // 2) - dwars_600)
         e6 = rest_600 % 2
@@ -725,28 +722,23 @@ else:
 
         return laad_lijst + bouw_auto_lijst(d7, e7, d6, e6, mix, cp3_voor, dwars_600) + achter_lijst
 
-    alle_kandidaten = [bereken_variant(0, 0)]
+    beste_lijst = bereken_variant(0, 0)
+    beste_len, beste_trekas = simuleer_lengte_en_trekas(beste_lijst)
+
     if not handmatig_modus and max_lengte == 13550:
         max_dwars_600 = min(2, rest_600 // 2)
         for dw in range(0, max_dwars_600 + 1):
             for c_v in range(0, hoofd_cp3 + 1, 2):
                 if dw == 0 and c_v == 0:
                     continue
-                alle_kandidaten.append(bereken_variant(c_v, dw))
-
-    beste_lijst = alle_kandidaten
-    beste_len, beste_trekas = simuleer_lengte_en_trekas(beste_lijst)
-
-    for kand in alle_kandidaten[1:]:
-        k_len, k_trekas = simuleer_lengte_en_trekas(kand)
-        k_past = (k_len <= max_lengte)
-        b_past = (beste_len <= max_lengte)
-
-        if k_past and not b_past:
-            beste_lijst, beste_len, beste_trekas = kand, k_len, k_trekas
-        elif k_past == b_past:
-            if beste_trekas > 11500 and k_trekas < beste_trekas:
-                beste_lijst, beste_len, beste_trekas = kand, k_len, k_trekas
+                kand = bereken_variant(c_v, dw)
+                k_len, k_trekas = simuleer_lengte_en_trekas(kand)
+                k_past = (k_len <= max_lengte)
+                b_past = (beste_len <= max_lengte)
+                if k_past and not b_past:
+                    beste_lijst, beste_len, beste_trekas = kand, k_len, k_trekas
+                elif k_past == b_past and beste_trekas > 11500 and k_trekas < beste_trekas:
+                    beste_lijst, beste_len, beste_trekas = kand, k_len, k_trekas
 
     laad_lijst = beste_lijst
 fig, ax = plt.subplots(figsize=(15, 4.1))
@@ -909,6 +901,7 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
             "✅ Binnen limiet" if belasting_tridem <= 24000 else f"⚠️ +{belasting_tridem - 24000} kg te zwaar!",
             delta_color="normal" if belasting_tridem <= 24000 else "inverse"
         )
+
     st.write(f"**Geladen:** {totale_meters} mm van {max_lengte} mm.")
     st.write("💡 **Legenda:** Blauw=CP3 | Groen=CP7 600kg | Rood=CP7 750kg | Geel=IBC | Grijs=Maatwerk | FELROOD=Past Niet")
     buf = io.BytesIO()
