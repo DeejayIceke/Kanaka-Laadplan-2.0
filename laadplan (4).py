@@ -551,28 +551,13 @@ if auto_aslast:
             for _ in range(d_600):
                 lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": False, "kg": 1200})
 
-            # 2. Enkele stapels (1H) daarachter in paren naast elkaar
-            totaal_vloer = d_750 + e_750 + d_600 + e_600
-            sluit_pallet = None
-            e_750_rij, e_600_rij = e_750, e_600
-
-            if totaal_vloer % 2 == 1:
-                if e_600_rij > 0:
-                    e_600_rij -= 1
-                    sluit_pallet = {"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#2ecc71", "force_midden": False, "kg": 600}
-                elif e_750_rij > 0:
-                    e_750_rij -= 1
-                    sluit_pallet = {"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#ff7675", "force_midden": False, "kg": 750}
-
-            for _ in range(e_750_rij):
+            # 2. Alle enkele stapels (1H) direct daarna (zodat alle CP7's samen blijven!)
+            for _ in range(e_750):
                 lijst.append({"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#ff7675", "force_midden": False, "kg": 750})
-            for _ in range(e_600_rij):
+            for _ in range(e_600):
                 lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#2ecc71", "force_midden": False, "kg": 600})
-            if sluit_pallet:
-                lijst.append(sluit_pallet)
 
             # 3. Overige producten (CP3, Maatwerk, IBC)
-
             heeft_pdf_cp3 = pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3)
             cp3_licht = pdf_d["cp3_500"] if heeft_pdf_cp3 else (pallets_cp3 if product_info["CP3"]["gewicht"] == 500 else 0)
             cp3_zwaar = pdf_d["cp3_1000"] if heeft_pdf_cp3 else (pallets_cp3 if product_info["CP3"]["gewicht"] == 1000 else 0)
@@ -587,10 +572,8 @@ if auto_aslast:
             for _ in range(pallets_ibc):
                 lijst.append({"naam": "IBC", "naam_puur": "IBC", "L": 1000, "B": 1200, "kleur": "#f1c40f", "force_midden": False, "kg": 1000})
 
-            # 4. Eventuele oneven CP7 sluit helemaal achteraan aan in de kortste rij
-            if sluit_pallet:
-                lijst.append(sluit_pallet)
             return lijst
+
 
         def bereken_totale_lengte(lijst):
             xo, xb, bo, bb, ibc_t, i = 0, 0, 0, 0, 0, 0
