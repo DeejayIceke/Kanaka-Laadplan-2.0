@@ -725,24 +725,28 @@ else:
 
         return laad_lijst + bouw_auto_lijst(d7, e7, d6, e6, mix, cp3_voor, dwars_600) + achter_lijst
 
-    beste_lijst = bereken_variant(0, 0)
-    beste_len, beste_trekas = simuleer_lengte_en_trekas(beste_lijst)
-
-    if not handmatig_modus and max_lengte == 13550 and beste_trekas > 11500:
+    alle_kandidaten = [bereken_variant(0, 0)]
+    if not handmatig_modus and max_lengte == 13550:
         max_dwars_600 = min(2, rest_600 // 2)
         for dw in range(0, max_dwars_600 + 1):
             for c_v in range(0, hoofd_cp3 + 1, 2):
                 if dw == 0 and c_v == 0:
                     continue
-                kandidaat = bereken_variant(c_v, dw)
-                k_len, k_trekas = simuleer_lengte_en_trekas(kandidaat)
-                if k_len <= max_lengte and k_trekas < beste_trekas:
-                    beste_lijst = kandidaat
-                    beste_len, beste_trekas = k_len, k_trekas
-                    if beste_trekas <= 11500:
-                        break
-            if beste_trekas <= 11500:
-                break
+                alle_kandidaten.append(bereken_variant(c_v, dw))
+
+    beste_lijst = alle_kandidaten
+    beste_len, beste_trekas = simuleer_lengte_en_trekas(beste_lijst)
+
+    for kand in alle_kandidaten[1:]:
+        k_len, k_trekas = simuleer_lengte_en_trekas(kand)
+        k_past = (k_len <= max_lengte)
+        b_past = (beste_len <= max_lengte)
+
+        if k_past and not b_past:
+            beste_lijst, beste_len, beste_trekas = kand, k_len, k_trekas
+        elif k_past == b_past:
+            if beste_trekas > 11500 and k_trekas < beste_trekas:
+                beste_lijst, beste_len, beste_trekas = kand, k_len, k_trekas
 
     laad_lijst = beste_lijst
 fig, ax = plt.subplots(figsize=(15, 4.1))
@@ -779,7 +783,6 @@ geplaatste_blokken = []
 x_onder, x_boven, ibc_paar_teller, idx = 0, 0, 0, 0
 breedte_op_onder = 0
 breedte_op_boven = 0
-
 while idx < len(laad_lijst):
     item = laad_lijst[idx]
     tekst_grootte = 9
@@ -906,7 +909,6 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
             "✅ Binnen limiet" if belasting_tridem <= 24000 else f"⚠️ +{belasting_tridem - 24000} kg te zwaar!",
             delta_color="normal" if belasting_tridem <= 24000 else "inverse"
         )
-
     st.write(f"**Geladen:** {totale_meters} mm van {max_lengte} mm.")
     st.write("💡 **Legenda:** Blauw=CP3 | Groen=CP7 600kg | Rood=CP7 750kg | Geel=IBC | Grijs=Maatwerk | FELROOD=Past Niet")
     buf = io.BytesIO()
