@@ -725,7 +725,9 @@ else:
     beste_lijst = bereken_variant(0, 0)
     beste_len, beste_trekas = simuleer_lengte_en_trekas(beste_lijst)
 
-    if not handmatig_modus and max_lengte == 13550:
+    heeft_handmatig_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw) > 0
+    if not heeft_handmatig_voor and max_lengte == 13550:
+
         max_dwars_600 = min(2, rest_600 // 2)
         for dw in range(0, max_dwars_600 + 1):
             for c_v in range(0, hoofd_cp3 + 1, 2):
