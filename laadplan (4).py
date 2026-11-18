@@ -636,8 +636,8 @@ if auto_aslast:
     voeg_partij_toe("IBC", pallets_ibc)
 
     # 6. Eventueel 1 overgebleven oneven CP7-stapel helemaal achteraan centraal aansluiten
-        if centraal_item:
-        voeg_partij_toe_aslast(*centraal_item, centraal=True)
+    if centraal_item:
+    voeg_partij_toe_aslast(*centraal_item, centraal=True)
 
 
 else:
