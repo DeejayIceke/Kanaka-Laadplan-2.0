@@ -543,15 +543,18 @@ if auto_aslast:
         rest_600 -= 4
         voeg_partij_toe("CP7_600", rest_600)
     else:
-        def bouw_auto_lijst(d_750, e_750, d_600, e_600):
+        def bouw_auto_lijst(d_750, e_750, d_600, e_600, mix_600_op_750=0):
             lijst = []
-            totaal_dubbel = d_750 + d_600
+            totaal_dubbel = d_750 + d_600 + mix_600_op_750
 
             # 1. Als het aantal dubbele stapels (2H) oneven is: zet 1 dubbele stapel centraal tegen het kopschot
             if totaal_dubbel % 2 == 1:
                 if d_600 > 0:
                     d_600 -= 1
                     lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": True, "kg": 1200})
+                elif mix_600_op_750 > 0:
+                    mix_600_op_750 -= 1
+                    lijst.append({"naam": "CP7 600 op 750", "naam_puur": "CP7_MIX", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": True, "kg": 1350})
                 elif d_750 > 0:
                     d_750 -= 1
                     lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": True, "kg": 1500})
@@ -559,10 +562,12 @@ if auto_aslast:
             # 2. Overige dubbele stapels (2H) in paren naast elkaar daarachter
             for _ in range(d_750):
                 lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "kg": 1500})
+            for _ in range(mix_600_op_750):
+                lijst.append({"naam": "CP7 600 op 750", "naam_puur": "CP7_MIX", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "kg": 1350})
             for _ in range(d_600):
                 lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": False, "kg": 1200})
 
-            # 3. Alle enkele stapels (1H) direct daarna (zodat alle CP7's samen blijven)
+            # 3. Alle enkele stapels (1H) direct daarna
             for _ in range(e_750):
                 lijst.append({"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#ff7675", "force_midden": False, "kg": 750})
             for _ in range(e_600):
@@ -620,29 +625,39 @@ if auto_aslast:
                 i += 1
             return max(xo, xb)
 
-        # Start met maximaal stapelen (2H)
+        # Start met maximaal stapelen per eigen soort (2H)
         dubbel_600 = rest_600 // 2
         enkel_600 = rest_600 % 2
         dubbel_750 = rest_750 // 2
         enkel_750 = rest_750 % 2
+        mix_stapel = 0
 
-        # Halveer dubbele stapels zolang de totale lengte (incl. evt. centrale 2H) binnen max_lengte blijft
+        # Als het niet past én we hebben zowel 1 losse CP7 600 als 1 losse CP7 750: stapel 600 op 750!
+        if enkel_600 == 1 and enkel_750 == 1:
+            zonder_mix = bouw_auto_lijst(dubbel_750, enkel_750, dubbel_600, enkel_600, 0)
+            if bereken_totale_lengte(zonder_mix) > max_lengte:
+                enkel_600 = 0
+                enkel_750 = 0
+                mix_stapel = 1
+
+        # Halveer dubbele stapels zolang de totale lengte binnen max_lengte blijft
         while (dubbel_600 + dubbel_750) > 0:
             if dubbel_750 > 0:
-                kandidaat = bouw_auto_lijst(dubbel_750 - 1, enkel_750 + 2, dubbel_600, enkel_600)
+                kandidaat = bouw_auto_lijst(dubbel_750 - 1, enkel_750 + 2, dubbel_600, enkel_600, mix_stapel)
                 if bereken_totale_lengte(kandidaat) <= max_lengte:
                     dubbel_750 -= 1
                     enkel_750 += 2
                     continue
             if dubbel_600 > 0:
-                kandidaat = bouw_auto_lijst(dubbel_750, enkel_750, dubbel_600 - 1, enkel_600 + 2)
+                kandidaat = bouw_auto_lijst(dubbel_750, enkel_750, dubbel_600 - 1, enkel_600 + 2, mix_stapel)
                 if bereken_totale_lengte(kandidaat) <= max_lengte:
                     dubbel_600 -= 1
                     enkel_600 += 2
                     continue
             break
 
-        laad_lijst.extend(bouw_auto_lijst(dubbel_750, enkel_750, dubbel_600, enkel_600))
+        laad_lijst.extend(bouw_auto_lijst(dubbel_750, enkel_750, dubbel_600, enkel_600, mix_stapel))
+
 
 
 
