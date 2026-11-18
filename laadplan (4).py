@@ -626,10 +626,6 @@ if auto_aslast:
             })
 
          # 6. Eventueel 1 overgebleven oneven stapel centraal aansluiten
-        if centraal_item:
-            voeg_partij_toe_aslast(centraal_item[0], centraal_item[1], centraal_item[2], centraal=True)
-
-
     heeft_pdf_cp3 = pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3)
     cp3_licht = pdf_d["cp3_500"] if heeft_pdf_cp3 else (pallets_cp3 if product_info["CP3"]["gewicht"] == 500 else 0)
     cp3_zwaar = pdf_d["cp3_1000"] if heeft_pdf_cp3 else (pallets_cp3 if product_info["CP3"]["gewicht"] == 1000 else 0)
@@ -638,6 +634,11 @@ if auto_aslast:
     voeg_partij_toe("CP3", cp3_licht, override_kg=500)
     voeg_partij_toe("Maatwerk", pallets_mw)
     voeg_partij_toe("IBC", pallets_ibc)
+
+    # 6. Eventueel 1 overgebleven oneven CP7-stapel helemaal achteraan centraal aansluiten
+    if centraal_item:
+        voeg_partij_toe_aslast(centraal_item, centraal_item, centraal_item, centraal=True)
+
 else:
     voor_items = (
         ("CP7_600", as_v_cp7_600, richting_v_cp7_600, c_v_cp7_600),
