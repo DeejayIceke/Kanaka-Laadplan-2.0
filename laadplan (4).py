@@ -28,7 +28,6 @@ except ImportError:
     OCR_BESCHIKBAAR = False
 
 st.set_page_config(page_title="Fons Laadplan", layout="wide")
-
 st.markdown("""
     <style>
         .block-container { padding-top: 3.5rem !important; }
@@ -226,7 +225,6 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
     kop_totaal = kop_res["cp3_500"] + kop_res["cp3_1000"] + kop_res["cp7_600"] + kop_res["cp7_750"] + kop_res["ibc"]
     res.update(kop_res if kop_totaal > witte_totaal else witte_res)
     return res
-
 def lees_kaneka_bestand(bestand):
     naam = bestand.name.lower()
     ruwe_bytes = bestand.getvalue()
@@ -269,6 +267,7 @@ def lees_kaneka_bestand(bestand):
     if volledige_tekst.strip():
         return verwerk_laadbon_tekst(volledige_tekst, is_foto=False)
     return "GEEN_TEKST"
+
 if "klik_volgorde" not in st.session_state: st.session_state.klik_volgorde = []
 if "reset_id" not in st.session_state: st.session_state.reset_id = 0
 if "pdf_data" not in st.session_state: st.session_state.pdf_data = None
@@ -307,7 +306,6 @@ with st.expander("📄 Laadbon importeren (PDF of Foto) — Automatisch invullen
             st.warning("⚠️ Bestand gelezen, maar geen regels herkend. Maak een rechtere/scherpere foto of gebruik de SAP-PDF.")
         with st.expander("🔍 Bekijk uitgelezen tekst van de bon"):
             st.text(d.get("ruwe_tekst", ""))
-
 st.write("### 1. Kies container / oplegger:")
 container_type = st.selectbox(
     "1. Kies container:", 
@@ -465,6 +463,7 @@ if handmatig_modus and (pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_t
                 as_a_mw = st.number_input("MW ACH", min_value=0, max_value=pallets_mw - as_v_mw, value=0, step=1, key=f"a_mw_{st.session_state.reset_id}") or 0
                 if as_a_mw > 0:
                     c_a_mw = (st.radio("MW ACH plaatsing:", ("Naast elkaar", "Centraal"), key=f"ca_mw_{st.session_state.reset_id}") == "Centraal")
+
 hoofd_cp7_600 = max(0, pallets_cp7_600_totaal - as_v_cp7_600 - as_a_cp7_600)
 if pallets_cp7_600_totaal > 0 and "CP7_600" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP7_600")
 
@@ -550,21 +549,33 @@ if auto_aslast:
         dubbel_750 = rest_750 // 2
         enkel_750 = rest_750 % 2
 
-        lengte_overig = (
-            math.ceil(pallets_cp3 / 2) * 1150
-            + math.ceil(pallets_ibc / 2) * (1100 if max_breedte == 2350 else 1000)
-            + math.ceil(pallets_mw / 2) * product_info["Maatwerk"]["lengte"]
-        )
+        # Bereken exacte lengte van overige pallets (inclusief doorschuiven bij oneven aantallen)
+        x_l, x_r = 0, 0
+        for _ in range(pallets_cp3):
+            if x_l <= x_r:
+                x_l += 1150
+            else:
+                x_r += 1150
+        for _ in range(pallets_mw):
+            mw_len = product_info["Maatwerk"]["lengte"]
+            if x_l <= x_r:
+                x_l += mw_len
+            else:
+                x_r += mw_len
+        for _ in range(pallets_ibc):
+            ibc_l = 1100 if max_breedte == 2350 else 1000
+            if x_l <= x_r:
+                x_l += ibc_l
+            else:
+                x_r += ibc_l
+        lengte_overig = max(x_l, x_r)
 
         # 2. Halveer dubbele stapels (2H -> 2x 1H) zolang het in de lengte past
         while (dubbel_600 + dubbel_750) > 0:
             huidige_vloer = dubbel_600 + enkel_600 + dubbel_750 + enkel_750
-            # Bij splitsen komt er 1 vloerplek bij; bereken hoeveel rijen (per 2 naast elkaar) dat kost
-            nieuwe_rijen = math.ceil((huidige_vloer + 1) / 2)
-            nieuwe_lengte = (nieuwe_rijen * 1400) + lengte_overig
+            nieuwe_vloer = huidige_vloer + 1
+            nieuwe_lengte = math.ceil(nieuwe_vloer / 2) * 1400 + lengte_overig
 
-            # Let op: als er hierna een oneven aantal vloerplekken overblijft en we die centraal zetten,
-            # kost die laatste rij 1400 mm (of 1150 mm dwars). We checken hier direct op volledige rijen:
             if nieuwe_lengte <= max_lengte:
                 if dubbel_750 > 0:
                     dubbel_750 -= 1
@@ -574,7 +585,6 @@ if auto_aslast:
                     enkel_600 += 2
             else:
                 break
-
 
         # 3. Controleer of er na het splitsen nog 1 oneven vloerplek overblijft
         totaal_vloer = dubbel_600 + enkel_600 + dubbel_750 + enkel_750
@@ -597,7 +607,7 @@ if auto_aslast:
                 dubbel_750 -= 1
                 centraal_item = ("CP7_750", 2, "Smal (1150x1400)" if mag_dwars else "Lang (1400x1150)")
 
-        # 4. Plaats eerst de zware/hoge dubbele stapels (2H) tegen het kopschot
+        # 4. Plaats eerst de hoge dubbele stapels (2H) tegen het kopschot
         voeg_partij_toe("CP7_750", dubbel_750 * 2)
         voeg_partij_toe("CP7_600", dubbel_600 * 2)
 
@@ -617,7 +627,7 @@ if auto_aslast:
 
         # 6. Eventueel 1 overgebleven oneven stapel centraal aansluiten
         if centraal_item:
-            voeg_partij_toe_aslast(centraal_item[0], centraal_item[1], centraal_item[2], centraal=True)
+            voeg_partij_toe_aslast(centraal_item, centraal_item, centraal_item, centraal=True)
 
     heeft_pdf_cp3 = pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3)
     cp3_licht = pdf_d["cp3_500"] if heeft_pdf_cp3 else (pallets_cp3 if product_info["CP3"]["gewicht"] == 500 else 0)
@@ -627,7 +637,6 @@ if auto_aslast:
     voeg_partij_toe("CP3", cp3_licht, override_kg=500)
     voeg_partij_toe("Maatwerk", pallets_mw)
     voeg_partij_toe("IBC", pallets_ibc)
-
 else:
     voor_items = (
         ("CP7_600", as_v_cp7_600, richting_v_cp7_600, c_v_cp7_600),
