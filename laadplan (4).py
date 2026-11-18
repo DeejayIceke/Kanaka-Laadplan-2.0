@@ -568,11 +568,11 @@ if auto_aslast:
                 lijst.append({"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#ff7675", "force_midden": False, "kg": 750})
             for _ in range(e_600_rij):
                 lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#2ecc71", "force_midden": False, "kg": 600})
+            if sluit_pallet:
+                lijst.append(sluit_pallet)
 
             # 3. Overige producten (CP3, Maatwerk, IBC)
 
-
-            # 3. Overige producten (CP3, Maatwerk, IBC)
             heeft_pdf_cp3 = pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3)
             cp3_licht = pdf_d["cp3_500"] if heeft_pdf_cp3 else (pallets_cp3 if product_info["CP3"]["gewicht"] == 500 else 0)
             cp3_zwaar = pdf_d["cp3_1000"] if heeft_pdf_cp3 else (pallets_cp3 if product_info["CP3"]["gewicht"] == 1000 else 0)
