@@ -556,12 +556,15 @@ if auto_aslast:
             + math.ceil(pallets_mw / 2) * product_info["Maatwerk"]["lengte"]
         )
 
-        # 2. Halveer dubbele stapels (2H -> 2x 1H) zolang er 1400 mm ruimte over is
+        # 2. Halveer dubbele stapels (2H -> 2x 1H) zolang het in de lengte past
         while (dubbel_600 + dubbel_750) > 0:
             huidige_vloer = dubbel_600 + enkel_600 + dubbel_750 + enkel_750
-            nieuwe_vloer = huidige_vloer + 1
-            nieuwe_lengte = math.ceil(nieuwe_vloer / 2) * 1400 + lengte_overig
+            # Bij splitsen komt er 1 vloerplek bij; bereken hoeveel rijen (per 2 naast elkaar) dat kost
+            nieuwe_rijen = math.ceil((huidige_vloer + 1) / 2)
+            nieuwe_lengte = (nieuwe_rijen * 1400) + lengte_overig
 
+            # Let op: als er hierna een oneven aantal vloerplekken overblijft en we die centraal zetten,
+            # kost die laatste rij 1400 mm (of 1150 mm dwars). We checken hier direct op volledige rijen:
             if nieuwe_lengte <= max_lengte:
                 if dubbel_750 > 0:
                     dubbel_750 -= 1
@@ -571,6 +574,7 @@ if auto_aslast:
                     enkel_600 += 2
             else:
                 break
+
 
         # 3. Controleer of er na het splitsen nog 1 oneven vloerplek overblijft
         totaal_vloer = dubbel_600 + enkel_600 + dubbel_750 + enkel_750
