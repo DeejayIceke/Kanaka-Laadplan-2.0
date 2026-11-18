@@ -657,10 +657,6 @@ if auto_aslast:
             break
 
         laad_lijst.extend(bouw_auto_lijst(dubbel_750, enkel_750, dubbel_600, enkel_600, mix_stapel))
-
-
-
-
 else:
     voor_items = (
         ("CP7_600", as_v_cp7_600, richting_v_cp7_600, c_v_cp7_600),
@@ -668,7 +664,6 @@ else:
         ("CP3", as_v_cp3, "Lang", c_v_cp3),
         ("IBC", as_v_ibc, "Lang", c_v_ibc),
         ("Maatwerk", as_v_mw, "Lang", c_v_mw),
-
     )
     for art, aantal, richt, is_centr in voor_items:
         if aantal > 0 and is_centr:
@@ -724,6 +719,24 @@ ax.add_patch(container_border)
 ax.text(80, max_breedte + 45, "⬅️ KOPSCHOT (0 m)", ha="left", va="bottom", fontweight="bold", fontsize=9, color="#334155")
 ax.text(max_lengte - 80, max_breedte + 45, f"DEUREN ({max_lengte / 1000:.2f} m) ➡️", ha="right", va="bottom", fontweight="bold", fontsize=9, color="#334155")
 
+def teken_blok(x, y, lengte, breedte, item, kleur_override=None):
+    if item.get("naam_puur") == "CP7_MIX" and kleur_override is None:
+        driehoek_rood = patches.Polygon(
+            [(x, y), (x + lengte, y), (x, y + breedte)],
+            closed=True, linewidth=0, facecolor="#c0392b", alpha=0.9
+        )
+        driehoek_groen = patches.Polygon(
+            [(x + lengte, y), (x + lengte, y + breedte), (x, y + breedte)],
+            closed=True, linewidth=0, facecolor="#1b5e20", alpha=0.9
+        )
+        ax.add_patch(driehoek_rood)
+        ax.add_patch(driehoek_groen)
+        ax.plot((x, x + lengte), (y + breedte, y), color="white", linewidth=0.8, alpha=0.7)
+        ax.add_patch(patches.Rectangle((x, y), lengte, breedte, linewidth=1.2, edgecolor='white', facecolor='none'))
+    else:
+        kleur = kleur_override if kleur_override else item["kleur"]
+        ax.add_patch(patches.Rectangle((x, y), lengte, breedte, linewidth=1, edgecolor='white', facecolor=kleur, alpha=0.85))
+
 geplaatste_blokken = []
 x_onder, x_boven, ibc_paar_teller, idx = 0, 0, 0, 0
 breedte_op_onder = 0
@@ -741,9 +754,9 @@ while idx < len(laad_lijst):
 
     if item["force_midden"]:
         start_x = max(x_onder, x_boven)
-        vulling_kleur = "#ff0000" if (start_x + item["L"] > max_lengte or item["B"] > max_breedte) else item["kleur"]
+        fout_kleur = "#ff0000" if (start_x + item["L"] > max_lengte or item["B"] > max_breedte) else None
         y_pos = (max_breedte - item["B"]) / 2
-        ax.add_patch(patches.Rectangle((start_x, y_pos), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85))
+        teken_blok(start_x, y_pos, item["L"], item["B"], item, fout_kleur)
         ax.text(start_x + (item["L"]/2), y_pos + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         geplaatste_blokken.append({"x_mid": start_x + (item["L"] / 2), "kg": item["kg"]})
         x_onder, x_boven = start_x + item["L"], start_x + item["L"]
@@ -790,8 +803,8 @@ while idx < len(laad_lijst):
             x_onder = x_boven
             breedte_op_onder = 0
 
-        vulling_kleur = "#ff0000" if (x_onder + item["L"] > max_lengte or item["B"] > max_breedte) else item["kleur"]
-        ax.add_patch(patches.Rectangle((x_onder, 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85))
+        fout_kleur = "#ff0000" if (x_onder + item["L"] > max_lengte or item["B"] > max_breedte) else None
+        teken_blok(x_onder, 20, item["L"], item["B"], item, fout_kleur)
         ax.text(x_onder + (item["L"]/2), 20 + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         geplaatste_blokken.append({"x_mid": x_onder + (item["L"] / 2), "kg": item["kg"]})
         x_onder += item["L"]
@@ -801,8 +814,8 @@ while idx < len(laad_lijst):
             x_boven = x_onder
             breedte_op_boven = 0
 
-        vulling_kleur = "#ff0000" if (x_boven + item["L"] > max_lengte or item["B"] > max_breedte) else item["kleur"]
-        ax.add_patch(patches.Rectangle((x_boven, max_breedte - item["B"] - 20), item["L"], item["B"], linewidth=1, edgecolor='white', facecolor=vulling_kleur, alpha=0.85))
+        fout_kleur = "#ff0000" if (x_boven + item["L"] > max_lengte or item["B"] > max_breedte) else None
+        teken_blok(x_boven, max_breedte - item["B"] - 20, item["L"], item["B"], item, fout_kleur)
         ax.text(x_boven + (item["L"]/2), max_breedte - item["B"] - 20 + (item["B"]/2), tekst_weergave, color="white" if "750" in item["naam"] else "black", weight="bold", ha="center", va="center", fontsize=tekst_grootte)
         geplaatste_blokken.append({"x_mid": x_boven + (item["L"] / 2), "kg": item["kg"]})
         x_boven += item["L"]
