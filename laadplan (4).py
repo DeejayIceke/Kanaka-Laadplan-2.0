@@ -543,101 +543,114 @@ if auto_aslast:
         rest_600 -= 4
         voeg_partij_toe("CP7_600", rest_600)
     else:
-        # 1. Start met maximaal stapelen (2H)
+        def bouw_auto_lijst(d_750, e_750, d_600, e_600):
+            lijst = []
+            # 1. Dubbele stapels (2H) eerst tegen het kopschot
+            for _ in range(d_750):
+                lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "kg": 1500})
+            for _ in range(d_600):
+                lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": False, "kg": 1200})
+
+            # 2. Enkele stapels (1H) daarachter in paren naast elkaar
+            totaal_vloer = d_750 + e_750 + d_600 + e_600
+            sluit_pallet = None
+            e_750_rij, e_600_rij = e_750, e_600
+
+            if totaal_vloer % 2 == 1:
+                if e_600_rij > 0:
+                    e_600_rij -= 1
+                    sluit_pallet = {"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#2ecc71", "force_midden": False, "kg": 600}
+                elif e_750_rij > 0:
+                    e_750_rij -= 1
+                    sluit_pallet = {"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#ff7675", "force_midden": False, "kg": 750}
+
+            for _ in range(e_750_rij):
+                lijst.append({"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#ff7675", "force_midden": False, "kg": 750})
+            for _ in range(e_600_rij):
+                lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#2ecc71", "force_midden": False, "kg": 600})
+
+            # 3. Overige producten (CP3, Maatwerk, IBC)
+            heeft_pdf_cp3 = pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3)
+            cp3_licht = pdf_d["cp3_500"] if heeft_pdf_cp3 else (pallets_cp3 if product_info["CP3"]["gewicht"] == 500 else 0)
+            cp3_zwaar = pdf_d["cp3_1000"] if heeft_pdf_cp3 else (pallets_cp3 if product_info["CP3"]["gewicht"] == 1000 else 0)
+
+            for _ in range(cp3_zwaar):
+                lijst.append({"naam": "CP3", "naam_puur": "CP3", "L": 1150, "B": 1150, "kleur": "#3498db", "force_midden": False, "kg": 1000})
+            for _ in range(cp3_licht):
+                lijst.append({"naam": "CP3", "naam_puur": "CP3", "L": 1150, "B": 1150, "kleur": "#3498db", "force_midden": False, "kg": 500})
+            for _ in range(pallets_mw):
+                mw_i = product_info["Maatwerk"]
+                lijst.append({"naam": "Maatwerk", "naam_puur": "Maatwerk", "L": mw_i["lengte"], "B": mw_i["breedte"], "kleur": "#7f8c8d", "force_midden": False, "kg": mw_i["gewicht"]})
+            for _ in range(pallets_ibc):
+                lijst.append({"naam": "IBC", "naam_puur": "IBC", "L": 1000, "B": 1200, "kleur": "#f1c40f", "force_midden": False, "kg": 1000})
+
+            # 4. Eventuele oneven CP7 sluit helemaal achteraan aan in de kortste rij
+            if sluit_pallet:
+                lijst.append(sluit_pallet)
+            return lijst
+
+        def bereken_totale_lengte(lijst):
+            xo, xb, bo, bb, ibc_t, i = 0, 0, 0, 0, 0, 0
+            while i < len(lijst):
+                it = lijst[i]
+                if max_breedte == 2350 and it["naam_puur"] == "IBC" and (i + 1 < len(lijst) and lijst[i + 1]["naam_puur"] == "IBC"):
+                    if ibc_t % 2 == 0:
+                        xo = (max(xo, xb) if ibc_t == 0 else xo) + 1000
+                        xb = (max(xo - 1000, xb) if ibc_t == 0 else xb) + 1200
+                        bo, bb = 1200, 1000
+                    else:
+                        xo += 1200
+                        xb += 1000
+                        bo, bb = 1000, 1200
+                    ibc_t += 1
+                    i += 2
+                    continue
+                if xo <= xb:
+                    if xo < xb and (it["B"] + bb > max_breedte):
+                        xo, bo = xb, 0
+                    xo += it["L"]
+                    bo = it["B"]
+                else:
+                    if xb < xo and (it["B"] + bo > max_breedte):
+                        xb, bb = xo, 0
+                    xb += it["L"]
+                    bb = it["B"]
+                i += 1
+            return max(xo, xb)
+
+        # Start met maximaal stapelen (2H)
         dubbel_600 = rest_600 // 2
         enkel_600 = rest_600 % 2
         dubbel_750 = rest_750 // 2
         enkel_750 = rest_750 % 2
 
-        # Bereken exacte lengte van overige pallets (inclusief doorschuiven bij oneven aantallen)
-        x_l, x_r = 0, 0
-        for _ in range(pallets_cp3):
-            if x_l <= x_r:
-                x_l += 1150
-            else:
-                x_r += 1150
-        for _ in range(pallets_mw):
-            mw_len = product_info["Maatwerk"]["lengte"]
-            if x_l <= x_r:
-                x_l += mw_len
-            else:
-                x_r += mw_len
-        for _ in range(pallets_ibc):
-            ibc_l = 1100 if max_breedte == 2350 else 1000
-            if x_l <= x_r:
-                x_l += ibc_l
-            else:
-                x_r += ibc_l
-        lengte_overig = max(x_l, x_r)
-
-        # 2. Halveer dubbele stapels (2H -> 2x 1H) zolang het in de lengte past
+        # Halveer dubbele stapels zolang de totale lengte (incl. doorschuiven) binnen max_lengte blijft
         while (dubbel_600 + dubbel_750) > 0:
-            huidige_vloer = dubbel_600 + enkel_600 + dubbel_750 + enkel_750
-            nieuwe_vloer = huidige_vloer + 1
-            nieuwe_lengte = math.ceil(nieuwe_vloer / 2) * 1400 + lengte_overig
-
-            if nieuwe_lengte <= max_lengte:
-                if dubbel_750 > 0:
+            if dubbel_750 > 0:
+                kandidaat = bouw_auto_lijst(dubbel_750 - 1, enkel_750 + 2, dubbel_600, enkel_600)
+                if bereken_totale_lengte(kandidaat) <= max_lengte:
                     dubbel_750 -= 1
                     enkel_750 += 2
-                else:
+                    continue
+            if dubbel_600 > 0:
+                kandidaat = bouw_auto_lijst(dubbel_750, enkel_750, dubbel_600 - 1, enkel_600 + 2)
+                if bereken_totale_lengte(kandidaat) <= max_lengte:
                     dubbel_600 -= 1
                     enkel_600 += 2
-            else:
-                break
+                    continue
+            break
 
-        # 3. Controleer of er na het splitsen nog 1 oneven vloerplek overblijft
-        totaal_vloer = dubbel_600 + enkel_600 + dubbel_750 + enkel_750
-        lengte_cp7_normaal = math.ceil(totaal_vloer / 2) * 1400
-        geschatte_lengte = lengte_cp7_normaal + lengte_overig
+        # Voorkom dat 1 enkele dubbele stapel (2H) naast een lage (1H) komt te staan
+        if (dubbel_600 + dubbel_750) % 2 == 1 and (enkel_600 + enkel_750) > 0:
+            if enkel_750 >= 2:
+                enkel_750 -= 2
+                dubbel_750 += 1
+            elif enkel_600 >= 2:
+                enkel_600 -= 2
+                dubbel_600 += 1
 
-        centraal_item = None
-        if totaal_vloer % 2 == 1:
-            mag_dwars = (geschatte_lengte + 1150 <= max_lengte)
-            if enkel_600 > 0:
-                enkel_600 -= 1
-                centraal_item = ("CP7_600", 1, "Smal (1100x1400)" if mag_dwars else "Lang (1400x1100)")
-            elif enkel_750 > 0:
-                enkel_750 -= 1
-                centraal_item = ("CP7_750", 1, "Smal (1150x1400)" if mag_dwars else "Lang (1400x1150)")
-            elif dubbel_600 > 0:
-                dubbel_600 -= 1
-                centraal_item = ("CP7_600", 2, "Smal (1100x1400)" if mag_dwars else "Lang (1400x1100)")
-            elif dubbel_750 > 0:
-                dubbel_750 -= 1
-                centraal_item = ("CP7_750", 2, "Smal (1150x1400)" if mag_dwars else "Lang (1400x1150)")
+        laad_lijst.extend(bouw_auto_lijst(dubbel_750, enkel_750, dubbel_600, enkel_600))
 
-        # 4. Plaats eerst de hoge dubbele stapels (2H) tegen het kopschot
-        voeg_partij_toe("CP7_750", dubbel_750 * 2)
-        voeg_partij_toe("CP7_600", dubbel_600 * 2)
-
-        # 5. Plaats daarna alle enkele CP7's (1H) netjes naast elkaar
-        for _ in range(enkel_750):
-            laad_lijst.append({
-                "naam": "CP7 750 (1H)", "naam_puur": "CP7_750",
-                "L": 1400, "B": 1150, "kleur": "#ff7675",
-                "force_midden": False, "kg": 750
-            })
-        for _ in range(enkel_600):
-            laad_lijst.append({
-                "naam": "CP7 600 (1H)", "naam_puur": "CP7_600",
-                "L": 1400, "B": 1100, "kleur": "#2ecc71",
-                "force_midden": False, "kg": 600
-            })
-
-         # 6. Eventueel 1 overgebleven oneven stapel centraal aansluiten
-    heeft_pdf_cp3 = pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3)
-    cp3_licht = pdf_d["cp3_500"] if heeft_pdf_cp3 else (pallets_cp3 if product_info["CP3"]["gewicht"] == 500 else 0)
-    cp3_zwaar = pdf_d["cp3_1000"] if heeft_pdf_cp3 else (pallets_cp3 if product_info["CP3"]["gewicht"] == 1000 else 0)
-
-    voeg_partij_toe("CP3", cp3_zwaar, override_kg=1000)
-    voeg_partij_toe("CP3", cp3_licht, override_kg=500)
-    voeg_partij_toe("Maatwerk", pallets_mw)
-    voeg_partij_toe("IBC", pallets_ibc)
-
-    # 6. Eventueel 1 overgebleven oneven CP7-stapel helemaal achteraan centraal aansluiten
-    if centraal_item:
-        voeg_partij_toe_aslast(*centraal_item, centraal=True)
 
 else:
     voor_items = (
