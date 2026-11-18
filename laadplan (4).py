@@ -637,8 +637,7 @@ if auto_aslast:
 
     # 6. Eventueel 1 overgebleven oneven CP7-stapel helemaal achteraan centraal aansluiten
     if centraal_item:
-    voeg_partij_toe_aslast(*centraal_item, centraal=True)
-
+        voeg_partij_toe_aslast(*centraal_item, centraal=True)
 
 else:
     voor_items = (
@@ -647,6 +646,7 @@ else:
         ("CP3", as_v_cp3, "Lang", c_v_cp3),
         ("IBC", as_v_ibc, "Lang", c_v_ibc),
         ("Maatwerk", as_v_mw, "Lang", c_v_mw),
+
     )
     for art, aantal, richt, is_centr in voor_items:
         if aantal > 0 and is_centr:
