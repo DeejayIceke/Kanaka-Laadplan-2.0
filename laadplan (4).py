@@ -596,10 +596,13 @@ else:
         for _ in range(d_750):
             lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "kg": 1500})
 
+        niets_erachter = (achter_zwaar + achter_licht + hoofd_mw + hoofd_ibc + as_a_cp3 + as_a_cp7_600 + as_a_cp7_750 + as_a_ibc + as_a_mw) == 0
+        enkel_centraal = (e_600 + e_750 == 1) and ((d_600 + d_750 + mix_600_op_750) % 2 == 0) and niets_erachter
+
         for _ in range(e_600):
-            lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#2ecc71", "force_midden": False, "kg": 600})
+            lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#2ecc71", "force_midden": enkel_centraal, "kg": 600})
         for _ in range(e_750):
-            lijst.append({"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#ff7675", "force_midden": False, "kg": 750})
+            lijst.append({"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#ff7675", "force_midden": enkel_centraal, "kg": 750})
 
         for _ in range(achter_zwaar):
             lijst.append({"naam": "CP3", "naam_puur": "CP3", "L": 1150, "B": 1150, "kleur": "#3498db", "force_midden": False, "kg": 1000})
@@ -614,14 +617,16 @@ else:
         return lijst
     def simuleer_lengte_trekas_zw(lijst):
         xo, xb, bo, bb, ibc_t, i = 0, 0, 0, 0, 0, 0
+        hoogte_o, hoogte_b, hoogte_fouten = 0, 0, 0
         blokken = []
         while i < len(lijst):
             it = lijst[i]
+            h_type = 2 if ("(2H)" in it["naam"] or "op 750" in it["naam"]) else (1 if "(1H)" in it["naam"] else 0)
             if it.get("force_midden"):
                 start_x = max(xo, xb)
                 blokken.append({"x_mid": start_x + (it["L"] / 2), "kg": it["kg"]})
                 xo, xb = start_x + it["L"], start_x + it["L"]
-                bo, bb = 0, 0
+                bo, bb, hoogte_o, hoogte_b = 0, 0, 0, 0
                 i += 1
                 continue
             if max_breedte == 2350 and it["naam_puur"] == "IBC" and (i + 1 < len(lijst) and lijst[i + 1]["naam_puur"] == "IBC"):
@@ -637,32 +642,37 @@ else:
                     blokken.append({"x_mid": xb + 500, "kg": lijst[i + 1]["kg"]})
                     xo, xb = xo + 1200, xb + 1000
                     bo, bb = 1000, 1200
+                hoogte_o, hoogte_b = 0, 0
                 ibc_t += 1
                 i += 2
                 continue
             if xo <= xb:
                 if xo < xb and (it["B"] + bb > max_breedte):
-                    xo, bo = xb, 0
+                    xo, bo, hoogte_o = xb, 0, 0
+                if xo < xb and h_type > 0 and hoogte_b > 0 and h_type != hoogte_b:
+                    hoogte_fouten += 1
                 blokken.append({"x_mid": xo + (it["L"] / 2), "kg": it["kg"]})
                 xo += it["L"]
-                bo = it["B"]
+                bo, hoogte_o = it["B"], h_type
             else:
                 if xb < xo and (it["B"] + bo > max_breedte):
-                    xb, bb = xo, 0
+                    xb, bb, hoogte_b = xo, 0, 0
+                if xb < xo and h_type > 0 and hoogte_o > 0 and h_type != hoogte_o:
+                    hoogte_fouten += 1
                 blokken.append({"x_mid": xb + (it["L"] / 2), "kg": it["kg"]})
                 xb += it["L"]
-                bb = it["B"]
+                bb, hoogte_b = it["B"], h_type
             i += 1
 
         tot_len = max(xo, xb)
         tot_kg = sum(b["kg"] for b in blokken)
         if tot_kg == 0 or max_lengte != 13550:
-            return tot_len, 0, 0
+            return tot_len, 0, 0, hoogte_fouten
         zw_mm = sum(b["x_mid"] * b["kg"] for b in blokken) / tot_kg
         aandeel_tr = max(0.0, min(1.25, (zw_mm - 1600) / (10200 - 1600)))
         schotel = 2000 + (tot_kg * (1.0 - aandeel_tr))
         trekas = round(2800 + (schotel * 0.72))
-        return tot_len, trekas, zw_mm
+        return tot_len, trekas, zw_mm, hoogte_fouten
 
     achter_lijst = []
     if handmatig_modus:
@@ -692,7 +702,7 @@ else:
 
         if e6 == 1 and e7 == 1:
             zonder_mix = laad_lijst + bouw_auto_lijst(d7, e7, d6, e6, 0, cp3_voor, dwars_600, dwars_750) + achter_lijst
-            len_zonder, _, _ = simuleer_lengte_trekas_zw(zonder_mix)
+            len_zonder, _, _, _ = simuleer_lengte_trekas_zw(zonder_mix)
             if len_zonder > max_lengte:
                 e6, e7, mix = 0, 0, 1
 
@@ -700,14 +710,14 @@ else:
             while (d6 + d7) > 0:
                 if d7 > 0:
                     kand = laad_lijst + bouw_auto_lijst(d7 - 1, e7 + 2, d6, e6, mix, cp3_voor, dwars_600, dwars_750) + achter_lijst
-                    k_len, _, _ = simuleer_lengte_trekas_zw(kand)
+                    k_len, _, _, _ = simuleer_lengte_trekas_zw(kand)
                     if k_len <= max_lengte:
                         d7 -= 1
                         e7 += 2
                         continue
                 if d6 > 0:
                     kand = laad_lijst + bouw_auto_lijst(d7, e7, d6 - 1, e6 + 2, mix, cp3_voor, dwars_600, dwars_750) + achter_lijst
-                    k_len, _, _ = simuleer_lengte_trekas_zw(kand)
+                    k_len, _, _, _ = simuleer_lengte_trekas_zw(kand)
                     if k_len <= max_lengte:
                         d6 -= 1
                         e6 += 2
@@ -726,12 +736,12 @@ else:
         return laad_lijst + bouw_auto_lijst(d7, e7, d6, e6, mix, cp3_voor, dwars_600, dwars_750) + achter_lijst
 
     def score_kandidaat(lijst):
-        k_len, k_trekas, k_zw = simuleer_lengte_trekas_zw(lijst)
+        k_len, k_trekas, k_zw, h_fouten = simuleer_lengte_trekas_zw(lijst)
         past = 1 if k_len <= max_lengte else 0
         trekas_ok = 1 if k_trekas <= 11500 else 0
         enkele_stuks = sum(1 for it in lijst if "(1H)" in it["naam"])
         zw_afwijking = abs(k_zw - 6900) if k_zw > 0 else 0
-        return (past, trekas_ok, -enkele_stuks, -zw_afwijking, -k_trekas)
+        return (past, trekas_ok, -h_fouten, -enkele_stuks, -zw_afwijking, -k_trekas)
 
     beste_lijst = bereken_variant(0, 0, 0, mag_halveren=True)
     beste_score = score_kandidaat(beste_lijst)
