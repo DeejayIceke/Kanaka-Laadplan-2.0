@@ -754,8 +754,8 @@ else:
 
     heeft_handmatig_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw) > 0
     if not heeft_handmatig_voor and max_lengte == 13550:
-        max_dw6 = min(6, rest_600 // 2)
-        max_dw7 = min(6, rest_750 // 2) if rest_600 == 0 else 0
+        max_dw6 = min(12, rest_600 // 2)
+        max_dw7 = min(12, rest_750 // 2) if rest_600 == 0 else 0
         for dw6 in range(0, max_dw6 + 1):
             for dw7 in range(0, max_dw7 + 1):
                 for c_v in range(0, hoofd_cp3 + 1, 2):
