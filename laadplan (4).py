@@ -609,7 +609,6 @@ else:
         for _ in range(e_750):
             lijst.append({"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1150 if enkel_dwars else 1400, "B": 1400 if enkel_dwars else 1150, "kleur": "#ff7675", "force_midden": enkel_centraal, "kg": 750})
 
-
         for _ in range(achter_zwaar):
             lijst.append({"naam": "CP3", "naam_puur": "CP3", "L": 1150, "B": 1150, "kleur": "#3498db", "force_midden": False, "kg": 1000})
         for _ in range(achter_licht):
@@ -742,9 +741,11 @@ else:
         return laad_lijst + bouw_auto_lijst(d7, e7, d6, e6, mix, cp3_voor, dwars_600, dwars_750) + achter_lijst
 
     def score_kandidaat(lijst):
-        k_len, k_trekas, k_zw, h_fouten = simuleer_lengte_trekas_zw(lijst)
+        k_len, k_trekas, k_zw, _ = simuleer_lengte_trekas_zw(lijst)
         past = 1 if k_len <= max_lengte else 0
         trekas_ok = 1 if k_trekas <= 11500 else 0
+        rij_2h = sum(1 for it in lijst if not it.get("force_midden") and ("(2H)" in it["naam"] or "op 750" in it["naam"]))
+        h_fouten = 1 if (rij_2h % 2 == 1) else 0
         enkele_stuks = sum(1 for it in lijst if "(1H)" in it["naam"])
         zw_afwijking = abs(k_zw - 6900) if k_zw > 0 else 0
         return (past, trekas_ok, -h_fouten, -enkele_stuks, -zw_afwijking, -k_trekas)
