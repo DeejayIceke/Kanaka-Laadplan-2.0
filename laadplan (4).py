@@ -554,10 +554,12 @@ elif not handmatig_modus and rest_600 >= 36 and rest_750 == 0 and hoofd_cp3 == 0
     rest_600 -= 4
     voeg_partij_toe("CP7_600", rest_600)
 else:
-    def bouw_auto_lijst(d_750, e_750, d_600, e_600, mix_600_op_750=0, cp3_voor=0, dwars_centraal_600=0):
+    def bouw_auto_lijst(d_750, e_750, d_600, e_600, mix_600_op_750=0, cp3_voor=0, dwars_600=0, dwars_750=0):
         lijst = []
-        for _ in range(dwars_centraal_600):
+        for _ in range(dwars_600):
             lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1100, "B": 1400, "kleur": "#1b5e20", "force_midden": True, "kg": 1200})
+        for _ in range(dwars_750):
+            lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1150, "B": 1400, "kleur": "#c0392b", "force_midden": True, "kg": 1500})
 
         heeft_pdf_cp3 = pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3) and (hoofd_cp3 == pallets_cp3)
         cp3_licht_tot = pdf_d["cp3_500"] if heeft_pdf_cp3 else (hoofd_cp3 if product_info["CP3"]["gewicht"] == 500 else 0)
@@ -574,7 +576,7 @@ else:
             lijst.append({"naam": "CP3", "naam_puur": "CP3", "L": 1150, "B": 1150, "kleur": "#3498db", "force_midden": False, "kg": 1000})
 
         totaal_dubbel = d_750 + d_600 + mix_600_op_750
-        heeft_al_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw + dwars_centraal_600 + cp3_voor) > 0
+        heeft_al_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw + dwars_600 + dwars_750 + cp3_voor) > 0
 
         if totaal_dubbel % 2 == 1 and not heeft_al_voor:
             if d_600 > 0:
@@ -610,7 +612,7 @@ else:
             lijst.append({"naam": "IBC", "naam_puur": "IBC", "L": 1000, "B": 1200, "kleur": "#f1c40f", "force_midden": False, "kg": 1000})
 
         return lijst
-    def simuleer_lengte_en_trekas(lijst):
+    def simuleer_lengte_trekas_zw(lijst):
         xo, xb, bo, bb, ibc_t, i = 0, 0, 0, 0, 0, 0
         blokken = []
         while i < len(lijst):
@@ -655,12 +657,12 @@ else:
         tot_len = max(xo, xb)
         tot_kg = sum(b["kg"] for b in blokken)
         if tot_kg == 0 or max_lengte != 13550:
-            return tot_len, 0
+            return tot_len, 0, 0
         zw_mm = sum(b["x_mid"] * b["kg"] for b in blokken) / tot_kg
         aandeel_tr = max(0.0, min(1.25, (zw_mm - 1600) / (10200 - 1600)))
         schotel = 2000 + (tot_kg * (1.0 - aandeel_tr))
         trekas = round(2800 + (schotel * 0.72))
-        return tot_len, trekas
+        return tot_len, trekas, zw_mm
 
     achter_lijst = []
     if handmatig_modus:
@@ -681,37 +683,38 @@ else:
                 voeg_partij_toe_aslast(art, aantal, richt, centraal=True)
         achter_lijst = laad_lijst
         laad_lijst = tijdelijk_laad
-    def bereken_variant(cp3_voor=0, dwars_600=0):
+    def bereken_variant(cp3_voor=0, dwars_600=0, dwars_750=0, mag_halveren=True):
         d6 = max(0, (rest_600 // 2) - dwars_600)
         e6 = rest_600 % 2
-        d7 = rest_750 // 2
+        d7 = max(0, (rest_750 // 2) - dwars_750)
         e7 = rest_750 % 2
         mix = 0
 
         if e6 == 1 and e7 == 1:
-            zonder_mix = laad_lijst + bouw_auto_lijst(d7, e7, d6, e6, 0, cp3_voor, dwars_600) + achter_lijst
-            len_zonder, _ = simuleer_lengte_en_trekas(zonder_mix)
+            zonder_mix = laad_lijst + bouw_auto_lijst(d7, e7, d6, e6, 0, cp3_voor, dwars_600, dwars_750) + achter_lijst
+            len_zonder, _, _ = simuleer_lengte_trekas_zw(zonder_mix)
             if len_zonder > max_lengte:
                 e6, e7, mix = 0, 0, 1
 
-        while (d6 + d7) > 0:
-            if d7 > 0:
-                kand = laad_lijst + bouw_auto_lijst(d7 - 1, e7 + 2, d6, e6, mix, cp3_voor, dwars_600) + achter_lijst
-                k_len, _ = simuleer_lengte_en_trekas(kand)
-                if k_len <= max_lengte:
-                    d7 -= 1
-                    e7 += 2
-                    continue
-            if d6 > 0:
-                kand = laad_lijst + bouw_auto_lijst(d7, e7, d6 - 1, e6 + 2, mix, cp3_voor, dwars_600) + achter_lijst
-                k_len, _ = simuleer_lengte_en_trekas(kand)
-                if k_len <= max_lengte:
-                    d6 -= 1
-                    e6 += 2
-                    continue
-            break
+        if mag_halveren:
+            while (d6 + d7) > 0:
+                if d7 > 0:
+                    kand = laad_lijst + bouw_auto_lijst(d7 - 1, e7 + 2, d6, e6, mix, cp3_voor, dwars_600, dwars_750) + achter_lijst
+                    k_len, _, _ = simuleer_lengte_trekas_zw(kand)
+                    if k_len <= max_lengte:
+                        d7 -= 1
+                        e7 += 2
+                        continue
+                if d6 > 0:
+                    kand = laad_lijst + bouw_auto_lijst(d7, e7, d6 - 1, e6 + 2, mix, cp3_voor, dwars_600, dwars_750) + achter_lijst
+                    k_len, _, _ = simuleer_lengte_trekas_zw(kand)
+                    if k_len <= max_lengte:
+                        d6 -= 1
+                        e6 += 2
+                        continue
+                break
 
-        heeft_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw + dwars_600 + cp3_voor) > 0
+        heeft_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw + dwars_600 + dwars_750 + cp3_voor) > 0
         if heeft_voor and (d7 + d6 + mix) % 2 == 1 and (e7 + e6) > 0:
             if e7 >= 2:
                 e7 -= 2
@@ -720,27 +723,34 @@ else:
                 e6 -= 2
                 d6 += 1
 
-        return laad_lijst + bouw_auto_lijst(d7, e7, d6, e6, mix, cp3_voor, dwars_600) + achter_lijst
+        return laad_lijst + bouw_auto_lijst(d7, e7, d6, e6, mix, cp3_voor, dwars_600, dwars_750) + achter_lijst
 
-    beste_lijst = bereken_variant(0, 0)
-    beste_len, beste_trekas = simuleer_lengte_en_trekas(beste_lijst)
+    def score_kandidaat(lijst):
+        k_len, k_trekas, k_zw = simuleer_lengte_trekas_zw(lijst)
+        past = 1 if k_len <= max_lengte else 0
+        trekas_ok = 1 if k_trekas <= 11500 else 0
+        enkele_stuks = sum(1 for it in lijst if "(1H)" in it["naam"])
+        zw_afwijking = abs(k_zw - 6900) if k_zw > 0 else 0
+        return (past, trekas_ok, -enkele_stuks, -zw_afwijking, -k_trekas)
+
+    beste_lijst = bereken_variant(0, 0, 0, mag_halveren=True)
+    beste_score = score_kandidaat(beste_lijst)
 
     heeft_handmatig_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw) > 0
     if not heeft_handmatig_voor and max_lengte == 13550:
-
-        max_dwars_600 = min(2, rest_600 // 2)
-        for dw in range(0, max_dwars_600 + 1):
-            for c_v in range(0, hoofd_cp3 + 1, 2):
-                if dw == 0 and c_v == 0:
-                    continue
-                kand = bereken_variant(c_v, dw)
-                k_len, k_trekas = simuleer_lengte_en_trekas(kand)
-                k_past = (k_len <= max_lengte)
-                b_past = (beste_len <= max_lengte)
-                if k_past and not b_past:
-                    beste_lijst, beste_len, beste_trekas = kand, k_len, k_trekas
-                elif k_past == b_past and beste_trekas > 11500 and k_trekas < beste_trekas:
-                    beste_lijst, beste_len, beste_trekas = kand, k_len, k_trekas
+        max_dw6 = min(6, rest_600 // 2)
+        max_dw7 = min(6, rest_750 // 2) if rest_600 == 0 else 0
+        for dw6 in range(0, max_dw6 + 1):
+            for dw7 in range(0, max_dw7 + 1):
+                for c_v in range(0, hoofd_cp3 + 1, 2):
+                    for halv in (False, True):
+                        if dw6 == 0 and dw7 == 0 and c_v == 0 and halv:
+                            continue
+                        kand = bereken_variant(c_v, dw6, dw7, mag_halveren=halv)
+                        sc = score_kandidaat(kand)
+                        if sc > beste_score:
+                            beste_lijst = kand
+                            beste_score = sc
 
     laad_lijst = beste_lijst
 fig, ax = plt.subplots(figsize=(15, 4.1))
