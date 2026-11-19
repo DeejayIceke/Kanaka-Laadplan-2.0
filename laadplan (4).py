@@ -598,11 +598,17 @@ else:
 
         niets_erachter = (achter_zwaar + achter_licht + hoofd_mw + hoofd_ibc + as_a_cp3 + as_a_cp7_600 + as_a_cp7_750 + as_a_ibc + as_a_mw) == 0
         enkel_centraal = (e_600 + e_750 == 1) and ((d_600 + d_750 + mix_600_op_750) % 2 == 0) and niets_erachter
+        enkel_dwars = False
+        if enkel_centraal:
+            huidige_len = sum(it["L"] for it in lijst if it.get("force_midden")) + ((d_600 + d_750 + mix_600_op_750) // 2) * 1400
+            if huidige_len + 1400 > max_lengte and huidige_len + 1100 <= max_lengte:
+                enkel_dwars = True
 
         for _ in range(e_600):
-            lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#2ecc71", "force_midden": enkel_centraal, "kg": 600})
+            lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1100 if enkel_dwars else 1400, "B": 1400 if enkel_dwars else 1100, "kleur": "#2ecc71", "force_midden": enkel_centraal, "kg": 600})
         for _ in range(e_750):
-            lijst.append({"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#ff7675", "force_midden": enkel_centraal, "kg": 750})
+            lijst.append({"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1150 if enkel_dwars else 1400, "B": 1400 if enkel_dwars else 1150, "kleur": "#ff7675", "force_midden": enkel_centraal, "kg": 750})
+
 
         for _ in range(achter_zwaar):
             lijst.append({"naam": "CP3", "naam_puur": "CP3", "L": 1150, "B": 1150, "kleur": "#3498db", "force_midden": False, "kg": 1000})
