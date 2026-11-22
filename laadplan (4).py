@@ -338,6 +338,21 @@ with col_wis:
         st.session_state.laatste_pdf_naam = ""
         st.session_state.reset_id += 1
         st.rerun()
+    uitvloeren = st.radio(
+        "Uitvloeren? (gehele lengte benutten):",
+        ("Ja", "Nee"),
+        horizontal=True,
+        key=f"uitvloeren_{st.session_state.reset_id}"
+    ) == "Ja"
+
+with col_titel: st.write("### 2. Vul aantal pallets in:")
+with col_wis:
+    if st.button("🗑️ Wis alles", type="primary", use_container_width=True):
+        st.session_state.klik_volgorde = []
+        st.session_state.pdf_data = None
+        st.session_state.laatste_pdf_naam = ""
+        st.session_state.reset_id += 1
+        st.rerun()
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
