@@ -85,9 +85,16 @@ st.markdown("""
                 display: none !important;
             }
         }
-            #MainMenu, footer, [data-testid="stToolbar"], .stDeployButton {
+        #MainMenu, footer, header,
+        [data-testid="stToolbar"],
+        [data-testid="stHeader"],
+        [data-testid="stDecoration"],
+        [data-testid="stStatusWidget"],
+        .stAppDeployButton, .stDeployButton {
             display: none !important;
+            visibility: hidden !important;
         }
+
 
     </style>
     <div class="modern-header">
