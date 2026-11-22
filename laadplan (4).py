@@ -29,21 +29,9 @@ except ImportError:
 
 st.set_page_config(page_title="Fons Laadplan", layout="wide")
 st.markdown("""
-        header[data-testid="stHeader"],
-        div[data-testid="stToolbar"],
-        div[data-testid="stDecoration"],
-        div[data-testid="stStatusWidget"],
-        #MainMenu,
-        footer {
-            display: none !important;
-            height: 0px !important;
-        }
-        .block-container {
-            padding-top: 1.2rem !important;
-        }
-
     <style>
-        .block-container { padding-top: 3.5rem !important; }
+        .block-container { padding-top: 1.5rem !important; }
+
         div[data-testid="stColumn"] { display: flex; flex-direction: column; }
         .custom-box {
             padding: 0.45rem; border-radius: 0.5rem; color: white; font-weight: bold; 
@@ -771,13 +759,15 @@ else:
         k_len, k_trekas, k_zw, _ = simuleer_lengte_trekas_zw(lijst)
         past = 1 if k_len <= effectieve_lengte else 0
         trekas_ok = 1 if k_trekas <= 11500 else 0
-        rij_2h = sum(1 for it in lijst if not it.get("force_midden") and ("(2H)" in it["naam"] or "op 750" in it["naam"]))
-        h_fouten = 1 if (rij_2h % 2 == 1) else 0
-        # Alleen lengte belonen zolang hij effectief binnen de 13.45m past!
+        tot_kg = sum(it["kg"] for it in lijst)
+        aandeel_tr = max(0.0, min(1.25, (k_zw - 1600) / (10200 - 1600))) if k_zw > 0 else 0
+        k_tridem = round(5200 + (tot_kg * aandeel_tr)) if max_lengte == 13550 else 0
+        tridem_ok = 1 if k_tridem <= 24000 else 0
         lengte_score = (k_len // 300) if (uitvloeren and past == 1) else -(k_len // 300)
         enkele_stuks = sum(1 for it in lijst if "(1H)" in it["naam"])
         zw_afwijking = abs(k_zw - 6900) if k_zw > 0 else 0
-        return (past, trekas_ok, -h_fouten, lengte_score, -enkele_stuks, -zw_afwijking)
+        return (past, trekas_ok, tridem_ok, lengte_score, -enkele_stuks, -zw_afwijking)
+
 
 
     if not uitvloeren:
@@ -941,8 +931,13 @@ if max_lengte == 13550:
 totale_meters = max(x_onder, x_boven); restruimte = max_lengte - totale_meters
 st.write("### 3. Plan & Aslast-controle:")
 if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0 or as_v_cp3 + as_v_cp7_600 + as_v_cp7_750 + as_v_ibc + as_v_mw + as_a_cp3 + as_a_cp7_600 + as_a_cp7_750 + as_a_ibc + as_a_mw > 0:
-    if restruimte >= 0: st.success(f"✅ Past! Nog {restruimte} mm over — **Totaal gewicht lading:** {totaal_lading_kg} kg")
-    else: st.error(f"❌ Past NIET! {abs(restruimte)} mm tekort — **Totaal gewicht lading:** {totaal_lading_kg} kg")
+    if restruimte >= marge_achter:
+        st.success(f"✅ Past! Nog {restruimte} mm over (incl. {marge_achter} mm marge) — **Totaal gewicht lading:** {totaal_lading_kg} kg")
+    elif restruimte >= 0:
+        st.warning(f"⚠️ Te krap! Nog maar {restruimte} mm over (minder dan de vereiste {marge_achter} mm marge) — **Totaal gewicht lading:** {totaal_lading_kg} kg")
+    else:
+        st.error(f"❌ Past NIET! {abs(restruimte)} mm tekort — **Totaal gewicht lading:** {totaal_lading_kg} kg")
+
     st.pyplot(fig, use_container_width=True)
     if max_lengte == 13550 and totaal_lading_kg > 0:
         trekas_leeg, schotel_leeg, tridem_leeg = 2800, 2000, 5200
