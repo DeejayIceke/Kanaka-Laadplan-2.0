@@ -4,7 +4,6 @@ import math
 import io
 import re
 import base64
-import importlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from PIL import Image, ImageOps
@@ -28,81 +27,25 @@ except ImportError:
     OCR_BESCHIKBAAR = False
 
 st.set_page_config(page_title="Fons Laadplan", layout="wide")
-st.markdown("""
-    <style>
-        .block-container { padding-top: 1.5rem !important; }
-
-        div[data-testid="stColumn"] { display: flex; flex-direction: column; }
-        .custom-box {
-            padding: 0.45rem; border-radius: 0.5rem; color: white; font-weight: bold; 
-            font-size: 13px; text-align: center; margin-bottom: 0.25rem;
-            min-height: 43px; display: flex; align-items: center; justify-content: center;
-        }
-        .modern-header {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            border-left: 6px solid #38bdf8;
-            padding: 1.2rem 1.5rem;
-            border-radius: 0.75rem;
-            margin-top: 0.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
-        }
-        .modern-title {
-            font-size: 2.1rem;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            background: linear-gradient(90deg, #ffffff 0%, #38bdf8 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin: 0;
-            line-height: 1.2;
-        }
-        .modern-subtitle {
-            color: #94a3b8;
-            font-size: 0.9rem;
-            margin: 0.25rem 0 0 0;
-            font-weight: 500;
-            letter-spacing: 0.3px;
-        }
-        @media (min-width: 951px) {
-            .alleen-mobiel {
-                display: none !important;
-            }
-        }
-        @media (max-width: 950px) {
-            div[data-testid="stExpander"]:has(div[data-testid="stFileUploader"]),
-            div[data-testid="stDownloadButton"] {
-                display: none !important;
-            }
-        }
-        @media (orientation: landscape) and (max-width: 950px) {
-            .block-container {
-                padding-left: 0.5rem !important;
-                padding-right: 0.5rem !important;
-                padding-top: 1rem !important;
-                max-width: 100% !important;
-            }
-            header, [data-testid="stToolbar"] {
-                display: none !important;
-            }
-        }
-        #MainMenu, footer, header,
-        [data-testid="stToolbar"],
-        [data-testid="stHeader"],
-        [data-testid="stDecoration"],
-        [data-testid="stStatusWidget"],
-        .stAppDeployButton, .stDeployButton {
-            display: none !important;
-            visibility: hidden !important;
-        }
-
-
-    </style>
-    <div class="modern-header">
-        <div class="modern-title">FONS LAADPLAN <span style="font-weight:400; font-size:1.3rem;">| 2.0</span></div>
-        <div class="modern-subtitle">Containerindeling &amp; live aslast-berekening</div>
-    </div>
-""", unsafe_allow_html=True)
+css_en_header = (
+    "<st" + "yle>"
+    ".block-container { padding-top: 1.5rem !important; }"
+    "div[data-testid='stColumn'] { display: flex; flex-direction: column; }"
+    ".custom-box { padding: 0.45rem; border-radius: 0.5rem; color: white; font-weight: bold; font-size: 13px; text-align: center; margin-bottom: 0.25rem; min-height: 43px; display: flex; align-items: center; justify-content: center; }"
+    ".modern-header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-left: 6px solid #38bdf8; padding: 1.2rem 1.5rem; border-radius: 0.75rem; margin-top: 0.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25); }"
+    ".modern-title { font-size: 2.1rem; font-weight: 800; letter-spacing: -0.5px; background: linear-gradient(90deg, #ffffff 0%, #38bdf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; line-height: 1.2; }"
+    ".modern-subtitle { color: #94a3b8; font-size: 0.9rem; margin: 0.25rem 0 0 0; font-weight: 500; letter-spacing: 0.3px; }"
+    "@media (min-width: 951px) { .alleen-mobiel { display: none !important; } }"
+    "@media (max-width: 950px) { div[data-testid='stExpander']:has(div[data-testid='stFileUploader']), div[data-testid='stDownloadButton'] { display: none !important; } }"
+    "@media (orientation: landscape) and (max-width: 950px) { .block-container { padding-left: 0.5rem !important; padding-right: 0.5rem !important; padding-top: 1rem !important; max-width: 100% !important; } header, [data-testid='stToolbar'] { display: none !important; } }"
+    "#MainMenu, footer, header, [data-testid='stToolbar'], [data-testid='stHeader'], [data-testid='stDecoration'], [data-testid='stStatusWidget'], .stAppDeployButton, .stDeployButton { display: none !important; visibility: hidden !important; }"
+    "</st" + "yle>"
+    "<div class='modern-header'>"
+    "<div class='modern-title'>FONS LAADPLAN <span style='font-weight:400; font-size:1.3rem;'>| 2.0</span></div>"
+    "<div class='modern-subtitle'>Containerindeling &amp; live aslast-berekening</div>"
+    "</div>"
+)
+st.markdown(css_en_header, unsafe_allow_html=True)
 def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
     res = {
         "cp3_500": 0, "cp3_1000": 0, "cp7_600": 0, "cp7_750": 0, "ibc": 0,
@@ -318,6 +261,7 @@ with st.expander("📄 Laadbon importeren (PDF of Foto) — Automatisch invullen
             st.warning("⚠️ Bestand gelezen, maar geen regels herkend. Maak een rechtere/scherpere foto of gebruik de SAP-PDF.")
         with st.expander("🔍 Bekijk uitgelezen tekst van de bon"):
             st.text(d.get("ruwe_tekst", ""))
+
 st.write("### 1. Kies container / oplegger:")
 container_type = st.selectbox(
     "1. Kies container:", 
@@ -327,7 +271,7 @@ container_type = st.selectbox(
 
 max_lengte = 13550 if "45ft" in container_type else 12030 if "40ft" in container_type else 5898
 max_breedte = 2426 if "45ft" in container_type else 2350
-marge_achter = 100  # Minimaal 10 cm (100 mm) vrij houden achteraan
+marge_achter = 100
 effectieve_lengte = max_lengte - marge_achter
 
 product_info = {
@@ -359,8 +303,6 @@ with col_wis:
         horizontal=True,
         key=f"uitvloeren_{st.session_state.reset_id}"
     ) == "Ja"
-
-
 col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
@@ -402,20 +344,22 @@ with col5:
         product_info["Maatwerk"]["breedte"] = mw_B
         product_info["Maatwerk"]["gewicht"] = mw_kg
 
-components.html("""
-<script>
-const doc = window.parent.document;
-function selecteerBijKlik(e) {
-    if (e.target && e.target.tagName === 'INPUT' && (e.target.type === 'number' || e.target.inputMode === 'numeric')) {
-        setTimeout(() => { e.target.select(); }, 20);
-    }
-}
-doc.removeEventListener('focusin', selecteerBijKlik);
-doc.addEventListener('focusin', selecteerBijKlik);
-doc.removeEventListener('click', selecteerBijKlik);
-doc.addEventListener('click', selecteerBijKlik);
-</script>
-""", height=0, width=0)
+js_select = (
+    "<sc" + "ript>"
+    "const doc = window.parent.document;"
+    "function selecteerBijKlik(e) {"
+    "  if (e.target && e.target.tagName === 'INPUT' && (e.target.type === 'number' || e.target.inputMode === 'numeric')) {"
+    "    setTimeout(() => { e.target.select(); }, 20);"
+    "  }"
+    "}"
+    "doc.removeEventListener('focusin', selecteerBijKlik);"
+    "doc.addEventListener('focusin', selecteerBijKlik);"
+    "doc.removeEventListener('click', selecteerBijKlik);"
+    "doc.addEventListener('click', selecteerBijKlik);"
+    "</sc" + "ript>"
+)
+components.html(js_select, height=0, width=0)
+
 handmatig_modus = False
 if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0:
     handmatig_modus = st.checkbox("🛠️ Handmatig aanpassen (zelf volgorde & voor/achter bepalen)", value=False)
@@ -549,6 +493,7 @@ def voeg_partij_toe(art_naam, aantal, dwars=False, override_kg=None):
                 "L": info["lengte"], "B": info["breedte"], "kleur": gekozen_kleur,
                 "force_midden": False, "kg": stapel_kg
             })
+
 if handmatig_modus:
     voor_items = (
         ("CP7_600", as_v_cp7_600, richting_v_cp7_600, c_v_cp7_600),
@@ -563,7 +508,6 @@ if handmatig_modus:
     for art, aantal, richt, is_centr in voor_items:
         if aantal > 0 and not is_centr:
             voeg_partij_toe_aslast(art, aantal, richt, centraal=False)
-
 rest_600 = hoofd_cp7_600
 rest_750 = hoofd_cp7_750
 
@@ -589,9 +533,9 @@ else:
 
         totaal_dubbel = d_750 + d_600 + mix_600_op_750
         heeft_al_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw + dwars_600 + dwars_750) > 0
+        heeft_overige = (cp3_zwaar + cp3_licht + hoofd_ibc + hoofd_mw) > 0
 
-        heeft_overige_pallets = (cp3_zwaar + cp3_licht + hoofd_ibc + hoofd_mw) > 0
-        if totaal_dubbel % 2 == 1 and not heeft_al_voor and not heeft_overige_pallets:
+        if totaal_dubbel % 2 == 1 and not heeft_al_voor and not heeft_overige:
             if d_600 > 0:
                 d_600 -= 1
                 lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": True, "kg": 1200})
@@ -602,7 +546,6 @@ else:
                 d_750 -= 1
                 lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": True, "kg": 1500})
 
-
         for _ in range(d_600):
             lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": False, "kg": 1200})
         for _ in range(mix_600_op_750):
@@ -610,14 +553,13 @@ else:
         for _ in range(d_750):
             lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "kg": 1500})
 
-        enkel_centraal = (e_600 + e_750 == 1) and ((d_600 + d_750 + mix_600_op_750) % 2 == 0)
+        enkel_centraal = (e_600 + e_750 == 1) and ((d_600 + d_750 + mix_600_op_750) % 2 == 0) and not heeft_overige
         enkel_dwars = False
         if enkel_centraal:
             extra_len = math.ceil((cp3_zwaar + cp3_licht) / 2) * 1150 + math.ceil(hoofd_ibc / 2) * 1000
             huidige_len = sum(it["L"] for it in lijst if it.get("force_midden")) + ((d_600 + d_750 + mix_600_op_750) // 2) * 1400 + extra_len
             if huidige_len + 1400 > effectieve_lengte and huidige_len + 1100 <= effectieve_lengte:
                 enkel_dwars = True
-
 
         for _ in range(e_600):
             lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1100 if enkel_dwars else 1400, "B": 1400 if enkel_dwars else 1100, "kleur": "#2ecc71", "force_midden": enkel_centraal, "kg": 600})
@@ -635,6 +577,7 @@ else:
             lijst.append({"naam": "IBC", "naam_puur": "IBC", "L": 1000, "B": 1200, "kleur": "#f1c40f", "force_midden": False, "kg": 1000})
 
         return lijst
+
     def simuleer_lengte_trekas_zw(lijst):
         xo, xb, bo, bb, ibc_t, i = 0, 0, 0, 0, 0, 0
         hoogte_o, hoogte_b, hoogte_fouten = 0, 0, 0
@@ -693,7 +636,6 @@ else:
         schotel = 2000 + (tot_kg * (1.0 - aandeel_tr))
         trekas = round(2800 + (schotel * 0.72))
         return tot_len, trekas, zw_mm, hoogte_fouten
-
     achter_lijst = []
     if handmatig_modus:
         tijdelijk_laad = laad_lijst.copy()
@@ -713,6 +655,7 @@ else:
                 voeg_partij_toe_aslast(art, aantal, richt, centraal=True)
         achter_lijst = laad_lijst
         laad_lijst = tijdelijk_laad
+
     def bereken_variant(dwars_600=0, dwars_750=0, mag_halveren=True):
         d6 = max(0, (rest_600 // 2) - dwars_600)
         e6 = rest_600 % 2
@@ -768,23 +711,20 @@ else:
         zw_afwijking = abs(k_zw - 6900) if k_zw > 0 else 0
         return (past, trekas_ok, tridem_ok, lengte_score, -enkele_stuks, -zw_afwijking)
 
-
-
     if not uitvloeren:
-        # Niet uitvloeren: alles zo compact mogelijk 2-hoog stapelen en geen onnodige dwarsplaatsingen
         beste_lijst = bereken_variant(0, 0, mag_halveren=False)
     else:
-        beste_lijst = bereken_variant(0, 0, mag_halveren=True)
+        beste_lijst = bereken_variant(0, 0, mag_halveren=False)
         beste_score = score_kandidaat(beste_lijst)
 
         heeft_handmatig_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw) > 0
         if not heeft_handmatig_voor and max_lengte == 13550:
-            max_dw6 = min(12, rest_600 // 2)
-            max_dw7 = min(12, rest_750 // 2) if rest_600 == 0 else 0
+            max_dw6 = min(4, rest_600 // 2)
+            max_dw7 = min(4, rest_750 // 2) if rest_600 == 0 else 0
             for dw6 in range(0, max_dw6 + 1):
                 for dw7 in range(0, max_dw7 + 1):
                     for halv in (False, True):
-                        if dw6 == 0 and dw7 == 0 and halv:
+                        if dw6 == 0 and dw7 == 0 and not halv:
                             continue
                         kand = bereken_variant(dw6, dw7, mag_halveren=halv)
                         sc = score_kandidaat(kand)
@@ -793,7 +733,6 @@ else:
                             beste_score = sc
 
     laad_lijst = beste_lijst
-
 fig, ax = plt.subplots(figsize=(15, 4.1))
 ax.set_xlim(0, max_lengte)
 ax.set_ylim(-650 if max_lengte == 13550 else -200, max_breedte + 180)
@@ -928,7 +867,8 @@ if max_lengte == 13550:
         ax.plot((zwaartepunt_mm, zwaartepunt_mm), (0, max_breedte), color="#dc2626", linestyle="--", linewidth=2.2)
         ax.text(zwaartepunt_mm, max_breedte + 35, f"⚖️ Zwaartepunt: {zwaartepunt_mm / 1000:.2f} m", ha="center", va="bottom", fontsize=9, fontweight="bold", color="#dc2626", bbox=dict(boxstyle="round,pad=0.2", facecolor="#fef2f2", edgecolor="#dc2626"))
 
-totale_meters = max(x_onder, x_boven); restruimte = max_lengte - totale_meters
+totale_meters = max(x_onder, x_boven)
+restruimte = max_lengte - totale_meters
 st.write("### 3. Plan & Aslast-controle:")
 if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0 or as_v_cp3 + as_v_cp7_600 + as_v_cp7_750 + as_v_ibc + as_v_mw + as_a_cp3 + as_a_cp7_600 + as_a_cp7_750 + as_a_ibc + as_a_mw > 0:
     if restruimte >= marge_achter:
@@ -937,7 +877,6 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
         st.warning(f"⚠️ Te krap! Nog maar {restruimte} mm over (minder dan de vereiste {marge_achter} mm marge) — **Totaal gewicht lading:** {totaal_lading_kg} kg")
     else:
         st.error(f"❌ Past NIET! {abs(restruimte)} mm tekort — **Totaal gewicht lading:** {totaal_lading_kg} kg")
-
     st.pyplot(fig, use_container_width=True)
     if max_lengte == 13550 and totaal_lading_kg > 0:
         trekas_leeg, schotel_leeg, tridem_leeg = 2800, 2000, 5200
@@ -971,46 +910,32 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
 
     st.download_button(label="📸 Download Laadplan (Afbeelding)", data=png_bytes, file_name="fons_laadplan.png", mime="image/png")
 
-    components.html(f"""
-    <style>
-        body {{ margin: 0; padding: 0; background: transparent; font-family: sans-serif; }}
-        @media (min-width: 951px) {{
-            #fs-btn {{ display: none; }}
-        }}
-    </style>
-    <button id="fs-btn" style="
-        width: 100%; padding: 14px 16px; border-radius: 10px; border: none;
-        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-        color: white; font-weight: 700; font-size: 16px; cursor: pointer;
-        box-shadow: 0 3px 10px rgba(0,0,0,0.25);">
-        🔍 Groot scherm
-    </button>
-    <script>
-    const b64 = "{b64_img}";
-    document.getElementById('fs-btn').addEventListener('click', function() {{
-        const pDoc = window.parent.document;
-        let oud = pDoc.getElementById('fons-fs-overlay');
-        if (oud) oud.remove();
-
-        let overlay = pDoc.createElement('div');
-        overlay.id = 'fons-fs-overlay';
-        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0f172a;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;';
-        overlay.addEventListener('click', function() {{ overlay.remove(); }});
-
-        let hint = pDoc.createElement('div');
-        hint.innerText = '👆 Tik op het scherm om terug te keren';
-        hint.style.cssText = 'position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.9);color:#f8fafc;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid #38bdf8;z-index:2147483647;pointer-events:none;white-space:nowrap;';
-
-        let img = pDoc.createElement('img');
-        img.src = 'data:image/png;base64,' + b64;
-        img.style.cssText = 'max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;background:white;border-radius:8px;padding:6px;box-shadow:0 8px 30px rgba(0,0,0,0.6);';
-
-        overlay.appendChild(img);
-        overlay.appendChild(hint);
-        pDoc.body.appendChild(overlay);
-    }});
-    </script>
-    """, height=56)
+    fs_html = (
+        "<st" + "yle>body { margin: 0; padding: 0; background: transparent; font-family: sans-serif; } @media (min-width: 951px) { #fs-btn { display: none; } }</st" + "yle>"
+        "<button id='fs-btn' style='width: 100%; padding: 14px 16px; border-radius: 10px; border: none; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; font-weight: 700; font-size: 16px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.25);'>🔍 Groot scherm</button>"
+        "<sc" + "ript>"
+        f"const b64 = '{b64_img}';"
+        "document.getElementById('fs-btn').addEventListener('click', function() {"
+        "  const pDoc = window.parent.document;"
+        "  let oud = pDoc.getElementById('fons-fs-overlay');"
+        "  if (oud) oud.remove();"
+        "  let overlay = pDoc.createElement('div');"
+        "  overlay.id = 'fons-fs-overlay';"
+        "  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0f172a;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;';"
+        "  overlay.addEventListener('click', function() { overlay.remove(); });"
+        "  let hint = pDoc.createElement('div');"
+        "  hint.innerText = '👆 Tik op het scherm om terug te keren';"
+        "  hint.style.cssText = 'position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.9);color:#f8fafc;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid #38bdf8;z-index:2147483647;pointer-events:none;white-space:nowrap;';"
+        "  let img = pDoc.createElement('img');"
+        "  img.src = 'data:image/png;base64,' + b64;"
+        "  img.style.cssText = 'max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;background:white;border-radius:8px;padding:6px;box-shadow:0 8px 30px rgba(0,0,0,0.6);';"
+        "  overlay.appendChild(img);"
+        "  overlay.appendChild(hint);"
+        "  pDoc.body.appendChild(overlay);"
+        "});"
+        "</sc" + "ript>"
+    )
+    components.html(fs_html, height=56)
 else:
     st.info("Container is leeg. Upload een PDF/foto-laadbon of gebruik de + en - knoppen om te beginnen.")
 
