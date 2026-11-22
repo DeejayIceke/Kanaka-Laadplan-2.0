@@ -85,6 +85,10 @@ st.markdown("""
                 display: none !important;
             }
         }
+            #MainMenu, footer, [data-testid="stToolbar"], .stDeployButton {
+            display: none !important;
+        }
+
     </style>
     <div class="modern-header">
         <div class="modern-title">FONS LAADPLAN <span style="font-weight:400; font-size:1.3rem;">| 2.0</span></div>
