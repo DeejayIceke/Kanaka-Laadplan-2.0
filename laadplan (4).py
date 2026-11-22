@@ -522,6 +522,10 @@ elif not handmatig_modus and rest_600 >= 36 and rest_750 == 0 and hoofd_cp3 == 0
 else:
     def bouw_auto_lijst(d_750, e_750, d_600, e_600, mix_600_op_750=0, dwars_600=0, dwars_750=0, dwars_1h_600=0):
         lijst = []
+        # Nooit 2H en 1H tegelijk dwars mixen
+        if dwars_600 > 0 or dwars_750 > 0:
+            dwars_1h_600 = 0
+
         for _ in range(dwars_600):
             lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1100, "B": 1400, "kleur": "#1b5e20", "force_midden": True, "kg": 1200})
         for _ in range(dwars_750):
@@ -533,21 +537,6 @@ else:
         cp3_licht = pdf_d["cp3_500"] if heeft_pdf_cp3 else (hoofd_cp3 if product_info["CP3"]["gewicht"] == 500 else 0)
         cp3_zwaar = pdf_d["cp3_1000"] if heeft_pdf_cp3 else (hoofd_cp3 if product_info["CP3"]["gewicht"] == 1000 else 0)
 
-        totaal_dubbel = d_750 + d_600 + mix_600_op_750
-        heeft_al_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw + dwars_600 + dwars_750 + dwars_1h_600) > 0
-        heeft_overige = (cp3_zwaar + cp3_licht + hoofd_ibc + hoofd_mw) > 0
-
-        if uitvloeren and totaal_dubbel % 2 == 1 and not heeft_al_voor and not heeft_overige:
-            if d_600 > 0:
-                d_600 -= 1
-                lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": True, "kg": 1200})
-            elif mix_600_op_750 > 0:
-                mix_600_op_750 -= 1
-                lijst.append({"naam": "CP7 600 op 750", "naam_puur": "CP7_MIX", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": True, "kg": 1350})
-            elif d_750 > 0:
-                d_750 -= 1
-                lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": True, "kg": 1500})
-
         # 1. Hoogste eerst: CP7 (2H) & mix
         for _ in range(d_600):
             lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": False, "kg": 1200})
@@ -556,28 +545,19 @@ else:
         for _ in range(d_750):
             lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "kg": 1500})
 
-        # 2. Daarna CP3 1000kg (lager dan CP7 2H, hoger dan CP7 1H; mag naast oneven CP7 2H)
-        for _ in range(cp3_zwaar):
-            lijst.append({"naam": "CP3", "naam_puur": "CP3", "L": 1150, "B": 1150, "kleur": "#3498db", "force_midden": False, "kg": 1000})
+        # 2. CP3 1000kg (mag naast oneven CP7 2H aansluiten; als er geen oneven CP7 2H is en hij oneven is, zet de laatste centraal zodat volgende groep recht begint)
+        dubbel_rij = d_600 + mix_600_op_750 + d_750
+        for i_z in range(cp3_zwaar):
+            is_laatste_oneven = (i_z == cp3_zwaar - 1) and ((dubbel_rij + cp3_zwaar) % 2 == 1) and (e_600 + e_750 > 0)
+            lijst.append({"naam": "CP3", "naam_puur": "CP3", "L": 1150, "B": 1150, "kleur": "#3498db", "force_midden": is_laatste_oneven, "kg": 1000})
 
-        # 3. Daarna CP7 (1H) — lager dan CP3 1000kg
-        enkel_centraal = uitvloeren and (e_600 + e_750 == 1) and ((d_600 + d_750 + mix_600_op_750 + cp3_zwaar) % 2 == 0) and not (cp3_licht + hoofd_ibc + hoofd_mw > 0)
-        enkel_dwars = False
-        if enkel_centraal:
-            extra_len = math.ceil((cp3_zwaar + cp3_licht) / 2) * 1150 + math.ceil(hoofd_ibc / 2) * 1000
-            huidige_len = sum(it["L"] for it in lijst if it.get("force_midden")) + ((d_600 + d_750 + mix_600_op_750) // 2) * 1400 + extra_len
-            if huidige_len + 1400 > effectieve_lengte and huidige_len + 1100 <= effectieve_lengte:
-                enkel_dwars = True
+        # 3. CP7 (1H) — altijd strak bij elkaar, nooit door elkaar met CP3
+        for _ in range(e_600):
+            lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#2ecc71", "force_midden": False, "kg": 600})
+        for _ in range(e_750):
+            lijst.append({"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#ff7675", "force_midden": False, "kg": 750})
 
-        # Als er een oneven aantal 2H + CP3_1000 is, zet de overgebleven losse CP7 (1H) niet naast CP3 maar op een eigen rij
-        for idx_1h in range(e_600):
-            centr_deze = enkel_centraal or (idx_1h == e_600 - 1 and e_750 == 0 and (d_600 + d_750 + mix_600_op_750 + cp3_zwaar + e_600) % 2 == 1 and uitvloeren)
-            lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1100 if enkel_dwars else 1400, "B": 1400 if enkel_dwars else 1100, "kleur": "#2ecc71", "force_midden": centr_deze, "kg": 600})
-        for idx_1h in range(e_750):
-            centr_deze = enkel_centraal or (idx_1h == e_750 - 1 and (d_600 + d_750 + mix_600_op_750 + cp3_zwaar + e_600 + e_750) % 2 == 1 and uitvloeren)
-            lijst.append({"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1150 if enkel_dwars else 1400, "B": 1400 if enkel_dwars else 1150, "kleur": "#ff7675", "force_midden": centr_deze, "kg": 750})
-
-        # 4. Daarna CP3 500kg & Maatwerk (laagste pallets vóór IBC)
+        # 4. Laagste pallets vóór IBC: CP3 500kg & Maatwerk
         for _ in range(cp3_licht):
             lijst.append({"naam": "CP3", "naam_puur": "CP3", "L": 1150, "B": 1150, "kleur": "#3498db", "force_midden": False, "kg": 500})
         for _ in range(hoofd_mw):
