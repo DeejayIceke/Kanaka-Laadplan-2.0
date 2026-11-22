@@ -602,7 +602,8 @@ else:
         totaal_dubbel = d_750 + d_600 + mix_600_op_750
         heeft_al_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw + dwars_600 + dwars_750) > 0
 
-        if totaal_dubbel % 2 == 1 and not heeft_al_voor:
+        heeft_overige_pallets = (cp3_zwaar + cp3_licht + hoofd_ibc + hoofd_mw) > 0
+        if totaal_dubbel % 2 == 1 and not heeft_al_voor and not heeft_overige_pallets:
             if d_600 > 0:
                 d_600 -= 1
                 lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": True, "kg": 1200})
@@ -612,6 +613,7 @@ else:
             elif d_750 > 0:
                 d_750 -= 1
                 lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": True, "kg": 1500})
+
 
         for _ in range(d_600):
             lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": False, "kg": 1200})
