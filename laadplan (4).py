@@ -332,7 +332,7 @@ init_ibc = pdf_d["ibc"] if pdf_d else 0
 col_titel, col_wis = st.columns(2)
 with col_titel: st.write("### 2. Vul aantal pallets in:")
 with col_wis:
-    if st.button("🗑️ Wis alles", type="primary", use_container_width=True):
+    if st.button("🗑️ Wis alles", type="primary", use_container_width=True, key="wis_alles_hoofd"):
         st.session_state.klik_volgorde = []
         st.session_state.pdf_data = None
         st.session_state.laatste_pdf_naam = ""
@@ -345,14 +345,6 @@ with col_wis:
         key=f"uitvloeren_{st.session_state.reset_id}"
     ) == "Ja"
 
-with col_titel: st.write("### 2. Vul aantal pallets in:")
-with col_wis:
-    if st.button("🗑️ Wis alles", type="primary", use_container_width=True):
-        st.session_state.klik_volgorde = []
-        st.session_state.pdf_data = None
-        st.session_state.laatste_pdf_naam = ""
-        st.session_state.reset_id += 1
-        st.rerun()
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
