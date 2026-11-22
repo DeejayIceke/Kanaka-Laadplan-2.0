@@ -531,11 +531,12 @@ else:
         cp3_licht = pdf_d["cp3_500"] if heeft_pdf_cp3 else (hoofd_cp3 if product_info["CP3"]["gewicht"] == 500 else 0)
         cp3_zwaar = pdf_d["cp3_1000"] if heeft_pdf_cp3 else (hoofd_cp3 if product_info["CP3"]["gewicht"] == 1000 else 0)
 
+        
         totaal_dubbel = d_750 + d_600 + mix_600_op_750
         heeft_al_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw + dwars_600 + dwars_750) > 0
         heeft_overige = (cp3_zwaar + cp3_licht + hoofd_ibc + hoofd_mw) > 0
 
-        if totaal_dubbel % 2 == 1 and not heeft_al_voor and not heeft_overige:
+        if uitvloeren and totaal_dubbel % 2 == 1 and not heeft_al_voor and not heeft_overige:
             if d_600 > 0:
                 d_600 -= 1
                 lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": True, "kg": 1200})
@@ -546,6 +547,7 @@ else:
                 d_750 -= 1
                 lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": True, "kg": 1500})
 
+
         for _ in range(d_600):
             lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": False, "kg": 1200})
         for _ in range(mix_600_op_750):
@@ -553,7 +555,7 @@ else:
         for _ in range(d_750):
             lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "kg": 1500})
 
-        enkel_centraal = (e_600 + e_750 == 1) and ((d_600 + d_750 + mix_600_op_750) % 2 == 0) and not heeft_overige
+        enkel_centraal = uitvloeren and (e_600 + e_750 == 1) and ((d_600 + d_750 + mix_600_op_750) % 2 == 0) and not heeft_overige
         enkel_dwars = False
         if enkel_centraal:
             extra_len = math.ceil((cp3_zwaar + cp3_licht) / 2) * 1150 + math.ceil(hoofd_ibc / 2) * 1000
