@@ -601,8 +601,9 @@ else:
         if enkel_centraal:
             extra_len = math.ceil((cp3_zwaar + cp3_licht) / 2) * 1150 + math.ceil(hoofd_ibc / 2) * 1000
             huidige_len = sum(it["L"] for it in lijst if it.get("force_midden")) + ((d_600 + d_750 + mix_600_op_750) // 2) * 1400 + extra_len
-        if huidige_len + 1400 > effectieve_lengte and huidige_len + 1100 <= effectieve_lengte:
-            enkel_dwars = True
+            if huidige_len + 1400 > effectieve_lengte and huidige_len + 1100 <= effectieve_lengte:
+                enkel_dwars = True
+
 
         for _ in range(e_600):
             lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1100 if enkel_dwars else 1400, "B": 1400 if enkel_dwars else 1100, "kleur": "#2ecc71", "force_midden": enkel_centraal, "kg": 600})
