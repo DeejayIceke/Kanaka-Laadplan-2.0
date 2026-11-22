@@ -706,10 +706,11 @@ else:
         aandeel_tr = max(0.0, min(1.25, (k_zw - 1600) / (10200 - 1600))) if k_zw > 0 else 0
         k_tridem = round(5200 + (tot_kg * aandeel_tr)) if max_lengte == 13550 else 0
         tridem_ok = 1 if k_tridem <= 24000 else 0
-        lengte_score = (k_len // 300) if (uitvloeren and past == 1) else -(k_len // 300)
+        lengte_score = (k_len // 300) if (uitvloeren and past == 1) else -k_len
         enkele_stuks = sum(1 for it in lijst if "(1H)" in it["naam"])
         zw_afwijking = abs(k_zw - 6900) if k_zw > 0 else 0
-        return (past, trekas_ok, tridem_ok, lengte_score, -enkele_stuks, -zw_afwijking)
+        return (past, lengte_score, trekas_ok, tridem_ok, -enkele_stuks, -zw_afwijking)
+
 
     if not uitvloeren:
         beste_lijst = bereken_variant(0, 0, mag_halveren=False)
