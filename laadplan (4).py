@@ -315,6 +315,9 @@ container_type = st.selectbox(
 
 max_lengte = 13550 if "45ft" in container_type else 12030 if "40ft" in container_type else 5898
 max_breedte = 2426 if "45ft" in container_type else 2350
+marge_achter = 100  # Minimaal 10 cm (100 mm) vrij houden achteraan
+effectieve_lengte = max_lengte - marge_achter
+
 product_info = {
     "CP3": {"lengte": 1150, "breedte": 1150, "kleur": "#3498db", "stapelbaar": False, "label": "CP3", "gewicht": 500},
     "CP7_600": {"lengte": 1400, "breedte": 1100, "kleur": "#2ecc71", "stapelbaar": True, "label": "CP7 600", "gewicht": 600},
