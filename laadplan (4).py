@@ -297,12 +297,15 @@ with col_wis:
         st.session_state.laatste_pdf_naam = ""
         st.session_state.reset_id += 1
         st.rerun()
-    uitvloeren = st.radio(
-        "Uitvloeren? (gehele lengte benutten):",
-        ("Ja", "Nee"),
+    uitvloeren_keuze = st.radio(
+        "Uitvloeren? (vloerlengte benutten):",
+        ("Ja (zonder afstapelen)", "Ja (met afstapelen)", "Nee (compact)"),
         horizontal=True,
         key=f"uitvloeren_{st.session_state.reset_id}"
-    ) == "Ja"
+    )
+    uitvloeren = uitvloeren_keuze.startswith("Ja")
+    mag_afstapelen = (uitvloeren_keuze == "Ja (met afstapelen)")
+
 col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
@@ -571,8 +574,6 @@ else:
         return lijst
 
 
-
-
     def simuleer_lengte_trekas_zw(lijst):
         xo, xb, bo, bb, ibc_t, i = 0, 0, 0, 0, 0, 0
         hoogte_o, hoogte_b, hoogte_fouten = 0, 0, 0
@@ -759,9 +760,10 @@ else:
             if not heeft_handmatig_voor and max_lengte == 13550:
                 max_dw6 = min(8, rest_600 // 2)
                 max_dw7 = min(8, rest_750 // 2) if rest_600 == 0 else 0
+                halv_opties = (False, True) if mag_afstapelen else (False,)
                 for dw6 in range(0, max_dw6 + 1):
                     for dw7 in range(0, max_dw7 + 1):
-                        for halv in (False, True):
+                        for halv in halv_opties:
                             max_dw1 = 4 if (halv and rest_600 > 0) else 0
                             for dw1 in range(0, max_dw1 + 1):
                                 if dw6 == 0 and dw7 == 0 and not halv and dw1 == 0:
@@ -771,6 +773,7 @@ else:
                                 if sc > beste_score:
                                     beste_lijst = kand
                                     beste_score = sc
+
 
     laad_lijst = beste_lijst
 
