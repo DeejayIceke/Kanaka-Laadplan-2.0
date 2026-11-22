@@ -726,14 +726,14 @@ else:
                         continue
                 break
 
-        heeft_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw + dwars_600 + dwars_750) > 0
-        if heeft_voor and (d7 + d6 + mix) % 2 == 1 and (e7 + e6) > 0:
-            if e7 >= 2:
-                e7 -= 2
-                d7 += 1
-            elif e6 >= 2:
-                e6 -= 2
-                d6 += 1
+            heeft_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw + dwars_600 + dwars_750) > 0
+            if heeft_voor and (d7 + d6 + mix) % 2 == 1 and (e7 + e6) > 0:
+                if e7 >= 2:
+                    e7 -= 2
+                    d7 += 1
+                elif e6 >= 2:
+                    e6 -= 2
+                    d6 += 1
 
         return laad_lijst + bouw_auto_lijst(d7, e7, d6, e6, mix, dwars_600, dwars_750) + achter_lijst
 
@@ -743,30 +743,35 @@ else:
         trekas_ok = 1 if k_trekas <= 11500 else 0
         rij_2h = sum(1 for it in lijst if not it.get("force_midden") and ("(2H)" in it["naam"] or "op 750" in it["naam"]))
         h_fouten = 1 if (rij_2h % 2 == 1) else 0
-        lengte_benut = k_len // 300
+        lengte_score = (k_len // 300) if uitvloeren else -(k_len // 300)
         enkele_stuks = sum(1 for it in lijst if "(1H)" in it["naam"])
         zw_afwijking = abs(k_zw - 6900) if k_zw > 0 else 0
-        return (past, trekas_ok, -h_fouten, lengte_benut, -enkele_stuks, -zw_afwijking)
+        return (past, trekas_ok, -h_fouten, lengte_score, -enkele_stuks, -zw_afwijking)
 
-    beste_lijst = bereken_variant(0, 0, mag_halveren=True)
-    beste_score = score_kandidaat(beste_lijst)
+    if not uitvloeren:
+        # Niet uitvloeren: alles zo compact mogelijk 2-hoog stapelen en geen onnodige dwarsplaatsingen
+        beste_lijst = bereken_variant(0, 0, mag_halveren=False)
+    else:
+        beste_lijst = bereken_variant(0, 0, mag_halveren=True)
+        beste_score = score_kandidaat(beste_lijst)
 
-    heeft_handmatig_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw) > 0
-    if not heeft_handmatig_voor and max_lengte == 13550:
-        max_dw6 = min(12, rest_600 // 2)
-        max_dw7 = min(12, rest_750 // 2) if rest_600 == 0 else 0
-        for dw6 in range(0, max_dw6 + 1):
-            for dw7 in range(0, max_dw7 + 1):
-                for halv in (False, True):
-                    if dw6 == 0 and dw7 == 0 and halv:
-                        continue
-                    kand = bereken_variant(dw6, dw7, mag_halveren=halv)
-                    sc = score_kandidaat(kand)
-                    if sc > beste_score:
-                        beste_lijst = kand
-                        beste_score = sc
+        heeft_handmatig_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw) > 0
+        if not heeft_handmatig_voor and max_lengte == 13550:
+            max_dw6 = min(12, rest_600 // 2)
+            max_dw7 = min(12, rest_750 // 2) if rest_600 == 0 else 0
+            for dw6 in range(0, max_dw6 + 1):
+                for dw7 in range(0, max_dw7 + 1):
+                    for halv in (False, True):
+                        if dw6 == 0 and dw7 == 0 and halv:
+                            continue
+                        kand = bereken_variant(dw6, dw7, mag_halveren=halv)
+                        sc = score_kandidaat(kand)
+                        if sc > beste_score:
+                            beste_lijst = kand
+                            beste_score = sc
 
     laad_lijst = beste_lijst
+
 fig, ax = plt.subplots(figsize=(15, 4.1))
 ax.set_xlim(0, max_lengte)
 ax.set_ylim(-650 if max_lengte == 13550 else -200, max_breedte + 180)
