@@ -748,7 +748,7 @@ else:
         lengte_score = (k_len // 300) if (uitvloeren and past == 1) else -k_len
         enkele_stuks = sum(1 for it in lijst if "(1H)" in it["naam"])
         zw_afwijking = abs(k_zw - 6900) if k_zw > 0 else 0
-        return (past, -h_fouten, trekas_ok, tridem_ok, -enkele_stuks, lengte_score, -zw_afwijking)
+        return (past, -h_fouten, trekas_ok, tridem_ok, lengte_score, -enkele_stuks, -zw_afwijking)
 
     beste_lijst = bereken_variant(0, 0, mag_halveren=False)
     if uitvloeren:
@@ -757,8 +757,8 @@ else:
         if k_len_basis <= effectieve_lengte:
             heeft_handmatig_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw) > 0
             if not heeft_handmatig_voor and max_lengte == 13550:
-                max_dw6 = min(4, rest_600 // 2)
-                max_dw7 = min(4, rest_750 // 2) if rest_600 == 0 else 0
+                max_dw6 = min(8, rest_600 // 2)
+                max_dw7 = min(8, rest_750 // 2) if rest_600 == 0 else 0
                 for dw6 in range(0, max_dw6 + 1):
                     for dw7 in range(0, max_dw7 + 1):
                         for halv in (False, True):
