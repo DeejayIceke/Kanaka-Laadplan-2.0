@@ -996,3 +996,5 @@ st.divider()
 import magazijn
 importlib.reload(magazijn)
 magazijn.toon_magazijn_tab()
+st.divider()
+st.caption("🛠️ **Laatste update (22-11-2026):** Optie 'Uitvloeren' toegevoegd & minimale vrije marge van 10 cm (100 mm) achteraan ingesteld.")
