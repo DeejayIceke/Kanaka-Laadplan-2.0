@@ -531,7 +531,6 @@ else:
         cp3_licht = pdf_d["cp3_500"] if heeft_pdf_cp3 else (hoofd_cp3 if product_info["CP3"]["gewicht"] == 500 else 0)
         cp3_zwaar = pdf_d["cp3_1000"] if heeft_pdf_cp3 else (hoofd_cp3 if product_info["CP3"]["gewicht"] == 1000 else 0)
 
-        
         totaal_dubbel = d_750 + d_600 + mix_600_op_750
         heeft_al_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw + dwars_600 + dwars_750) > 0
         heeft_overige = (cp3_zwaar + cp3_licht + hoofd_ibc + hoofd_mw) > 0
@@ -546,7 +545,6 @@ else:
             elif d_750 > 0:
                 d_750 -= 1
                 lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": True, "kg": 1500})
-
 
         for _ in range(d_600):
             lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": False, "kg": 1200})
@@ -579,6 +577,7 @@ else:
             lijst.append({"naam": "IBC", "naam_puur": "IBC", "L": 1000, "B": 1200, "kleur": "#f1c40f", "force_midden": False, "kg": 1000})
 
         return lijst
+
 
     def simuleer_lengte_trekas_zw(lijst):
         xo, xb, bo, bb, ibc_t, i = 0, 0, 0, 0, 0, 0
@@ -713,13 +712,10 @@ else:
         zw_afwijking = abs(k_zw - 6900) if k_zw > 0 else 0
         return (past, lengte_score, trekas_ok, tridem_ok, -enkele_stuks, -zw_afwijking)
 
-
     beste_lijst = bereken_variant(0, 0, mag_halveren=False)
     if uitvloeren:
         beste_score = score_kandidaat(beste_lijst)
         k_len_basis, _, _, _ = simuleer_lengte_trekas_zw(beste_lijst)
-
-        # Alleen uitvloeren / centraal draaien als de compacte basislading überhaupt binnen de 13,45 m past!
         if k_len_basis <= effectieve_lengte:
             heeft_handmatig_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw) > 0
             if not heeft_handmatig_voor and max_lengte == 13550:
@@ -736,8 +732,8 @@ else:
                                 beste_lijst = kand
                                 beste_score = sc
 
-
     laad_lijst = beste_lijst
+
 fig, ax = plt.subplots(figsize=(15, 4.1))
 ax.set_xlim(0, max_lengte)
 ax.set_ylim(-650 if max_lengte == 13550 else -200, max_breedte + 180)
