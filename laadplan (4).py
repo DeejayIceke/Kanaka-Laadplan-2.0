@@ -29,6 +29,19 @@ except ImportError:
 
 st.set_page_config(page_title="Fons Laadplan", layout="wide")
 st.markdown("""
+        header[data-testid="stHeader"],
+        div[data-testid="stToolbar"],
+        div[data-testid="stDecoration"],
+        div[data-testid="stStatusWidget"],
+        #MainMenu,
+        footer {
+            display: none !important;
+            height: 0px !important;
+        }
+        .block-container {
+            padding-top: 1.2rem !important;
+        }
+
     <style>
         .block-container { padding-top: 3.5rem !important; }
         div[data-testid="stColumn"] { display: flex; flex-direction: column; }
