@@ -993,8 +993,15 @@ else:
     st.info("Container is leeg. Upload een PDF/foto-laadbon of gebruik de + en - knoppen om te beginnen.")
 
 st.divider()
-import magazijn
-importlib.reload(magazijn)
-magazijn.toon_magazijn_tab()
-st.divider()
-st.caption("🛠️ **Laatste update (22-11-2026):** Optie 'Uitvloeren' toegevoegd & minimale vrije marge van 10 cm (100 mm) achteraan ingesteld.")
+with st.expander("📋 Laatste updates & verbeteringen", expanded=False):
+    st.markdown("""
+    * **22-11-2026:**
+        * **Keuze 'Uitvloeren' (Ja/Nee):** Kies voor *Ja* om de volledige vloerlengte te benutten, of *Nee* om alles compact 2-hoog te stapelen zodat er ruimte overblijft om later bij te laden.
+        * **Minimaal 10 cm marge achteraan:** Het laadplan houdt nu standaard 10 cm (100 mm) vrij bij de deuren zodat alles zeker past.
+    * **Versie 2.0 (Eerdere verbeteringen):**
+        * **Laadbon scannen (PDF & foto):** Upload een Kaneka Loading List (ook iPhone-foto's) om aantallen en gewichten automatisch in te vullen.
+        * **Live aslast- & zwaartepuntcontrole (45ft):** Directe controle of de belasting op de trekas (max. 11.500 kg) en het tridemstel (max. 24.000 kg) binnen de limiet blijft.
+        * **Slim combineren & plaatsen:** Automatisch combineren van CP7 600 op CP7 750 en slim draaien van pallets voor een optimale verdeling.
+        * **Handmatig aanpassen (VOR/ACH):** Zelf bepalen welke pallets vooraan of achteraan komen te staan.
+        * **Groot scherm op mobiel:** Tik op *🔍 Groot scherm* om het laadplan schermvullend op je telefoon te bekijken.
+    """)
