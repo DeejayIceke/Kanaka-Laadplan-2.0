@@ -660,9 +660,15 @@ else:
         mix = 0
 
         if e6 == 1 and e7 == 1:
-            zonder_mix = laad_lijst + bouw_auto_lijst(d7, e7, d6, e6, 0, dwars_600, dwars_750) + achter_lijst
-            len_zonder, _, _, _ = simuleer_lengte_trekas_zw(zonder_mix)
-            if len_zonder > effectieve_lengte:
+            zonder_mix = laad_lijst + bouw_auto_lijst(d7, e7, d6, e6, 0, dwars_600, dwars_750, 0) + achter_lijst
+            len_zonder, trekas_zonder, zw_zonder, _ = simuleer_lengte_trekas_zw(zonder_mix)
+            met_mix = laad_lijst + bouw_auto_lijst(d7, 0, d6, 0, 1, dwars_600, dwars_750, 0) + achter_lijst
+            _, trekas_met, zw_met, _ = simuleer_lengte_trekas_zw(met_mix)
+            tot_kg_mix = sum(it["kg"] for it in met_mix)
+            tridem_met = round(5200 + tot_kg_mix * max(0.0, min(1.25, (zw_met - 1600) / 8600))) if (max_lengte == 13550 and zw_met > 0) else 0
+            aslast_met_ok = (trekas_met <= 11500 and tridem_met <= 24000)
+
+            if len_zonder > effectieve_lengte or (not mag_afstapelen and aslast_met_ok):
                 e6, e7, mix = 0, 0, 1
 
         if mag_halveren:
