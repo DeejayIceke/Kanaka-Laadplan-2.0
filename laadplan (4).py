@@ -548,10 +548,10 @@ else:
         for _ in range(d_750):
             lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "kg": 1500})
 
-        # 2. CP3 1000kg (mag zowel naast oneven CP7 2H als naast IBC aansluiten, maar nooit door elkaar met CP7 1H)
+        # 2. CP3 1000kg (mag zowel naast oneven CP7 2H als naast IBC aansluiten; bij compact ook naast laatste CP7 1H)
         dubbel_rij = d_600 + mix_600_op_750 + d_750
         for i_z in range(cp3_zwaar):
-            is_laatste_oneven = (i_z == cp3_zwaar - 1) and ((dubbel_rij + cp3_zwaar) % 2 == 1) and (e_600 + e_750 > 0) and (hoofd_ibc == 0)
+            is_laatste_oneven = uitvloeren and (i_z == cp3_zwaar - 1) and ((dubbel_rij + cp3_zwaar) % 2 == 1) and (e_600 + e_750 > 0) and (hoofd_ibc == 0)
             lijst.append({"naam": "CP3", "naam_puur": "CP3", "L": 1150, "B": 1150, "kleur": "#3498db", "force_midden": is_laatste_oneven, "kg": 1000})
 
         # 3. CP7 (1H) — altijd strak bij elkaar, nooit door elkaar met CP3
