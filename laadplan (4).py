@@ -601,8 +601,8 @@ else:
         if enkel_centraal:
             extra_len = math.ceil((cp3_zwaar + cp3_licht) / 2) * 1150 + math.ceil(hoofd_ibc / 2) * 1000
             huidige_len = sum(it["L"] for it in lijst if it.get("force_midden")) + ((d_600 + d_750 + mix_600_op_750) // 2) * 1400 + extra_len
-            if huidige_len + 1400 > max_lengte and huidige_len + 1100 <= max_lengte:
-                enkel_dwars = True
+        if huidige_len + 1400 > effectieve_lengte and huidige_len + 1100 <= effectieve_lengte:
+            enkel_dwars = True
 
         for _ in range(e_600):
             lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1100 if enkel_dwars else 1400, "B": 1400 if enkel_dwars else 1100, "kleur": "#2ecc71", "force_midden": enkel_centraal, "kg": 600})
@@ -708,7 +708,7 @@ else:
         if e6 == 1 and e7 == 1:
             zonder_mix = laad_lijst + bouw_auto_lijst(d7, e7, d6, e6, 0, dwars_600, dwars_750) + achter_lijst
             len_zonder, _, _, _ = simuleer_lengte_trekas_zw(zonder_mix)
-            if len_zonder > max_lengte:
+            if len_zonder > effectieve_lengte:
                 e6, e7, mix = 0, 0, 1
 
         if mag_halveren:
@@ -716,14 +716,14 @@ else:
                 if d7 > 0:
                     kand = laad_lijst + bouw_auto_lijst(d7 - 1, e7 + 2, d6, e6, mix, dwars_600, dwars_750) + achter_lijst
                     k_len, _, _, _ = simuleer_lengte_trekas_zw(kand)
-                    if k_len <= max_lengte:
+                    if k_len <= effectieve_lengte:
                         d7 -= 1
                         e7 += 2
                         continue
                 if d6 > 0:
                     kand = laad_lijst + bouw_auto_lijst(d7, e7, d6 - 1, e6 + 2, mix, dwars_600, dwars_750) + achter_lijst
                     k_len, _, _, _ = simuleer_lengte_trekas_zw(kand)
-                    if k_len <= max_lengte:
+                    if k_len <= effectieve_lengte:
                         d6 -= 1
                         e6 += 2
                         continue
@@ -742,7 +742,8 @@ else:
 
     def score_kandidaat(lijst):
         k_len, k_trekas, k_zw, _ = simuleer_lengte_trekas_zw(lijst)
-        past = 1 if k_len <= max_lengte else 0
+        past = 1 if k_len <= effectieve_lengte else 0
+
         trekas_ok = 1 if k_trekas <= 11500 else 0
         rij_2h = sum(1 for it in lijst if not it.get("force_midden") and ("(2H)" in it["naam"] or "op 750" in it["naam"]))
         h_fouten = 1 if (rij_2h % 2 == 1) else 0
@@ -786,6 +787,8 @@ ax.add_patch(container_border)
 
 ax.text(80, max_breedte + 45, "⬅️ KOPSCHOT (0 m)", ha="left", va="bottom", fontweight="bold", fontsize=9, color="#334155")
 ax.text(max_lengte - 80, max_breedte + 45, f"DEUREN ({max_lengte / 1000:.2f} m) ➡️", ha="right", va="bottom", fontweight="bold", fontsize=9, color="#334155")
+ax.plot((effectieve_lengte, effectieve_lengte), (0, max_breedte), color="#f59e0b", linestyle=":", linewidth=2)
+ax.text(effectieve_lengte - 40, 40, "Min. 10 cm vrij", ha="right", va="bottom", fontsize=7.5, fontweight="bold", color="#d97706")
 
 def teken_blok(x, y, lengte, breedte, item, kleur_override=None):
     if item.get("naam_puur") == "CP7_MIX" and kleur_override is None:
