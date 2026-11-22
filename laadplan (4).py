@@ -712,26 +712,28 @@ else:
         return (past, lengte_score, trekas_ok, tridem_ok, -enkele_stuks, -zw_afwijking)
 
 
-    if not uitvloeren:
-        beste_lijst = bereken_variant(0, 0, mag_halveren=False)
-    else:
-        beste_lijst = bereken_variant(0, 0, mag_halveren=False)
+    beste_lijst = bereken_variant(0, 0, mag_halveren=False)
+    if uitvloeren:
         beste_score = score_kandidaat(beste_lijst)
+        k_len_basis, _, _, _ = simuleer_lengte_trekas_zw(beste_lijst)
 
-        heeft_handmatig_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw) > 0
-        if not heeft_handmatig_voor and max_lengte == 13550:
-            max_dw6 = min(4, rest_600 // 2)
-            max_dw7 = min(4, rest_750 // 2) if rest_600 == 0 else 0
-            for dw6 in range(0, max_dw6 + 1):
-                for dw7 in range(0, max_dw7 + 1):
-                    for halv in (False, True):
-                        if dw6 == 0 and dw7 == 0 and not halv:
-                            continue
-                        kand = bereken_variant(dw6, dw7, mag_halveren=halv)
-                        sc = score_kandidaat(kand)
-                        if sc > beste_score:
-                            beste_lijst = kand
-                            beste_score = sc
+        # Alleen uitvloeren / centraal draaien als de compacte basislading überhaupt binnen de 13,45 m past!
+        if k_len_basis <= effectieve_lengte:
+            heeft_handmatig_voor = (as_v_cp7_600 + as_v_cp7_750 + as_v_cp3 + as_v_ibc + as_v_mw) > 0
+            if not heeft_handmatig_voor and max_lengte == 13550:
+                max_dw6 = min(4, rest_600 // 2)
+                max_dw7 = min(4, rest_750 // 2) if rest_600 == 0 else 0
+                for dw6 in range(0, max_dw6 + 1):
+                    for dw7 in range(0, max_dw7 + 1):
+                        for halv in (False, True):
+                            if dw6 == 0 and dw7 == 0 and not halv:
+                                continue
+                            kand = bereken_variant(dw6, dw7, mag_halveren=halv)
+                            sc = score_kandidaat(kand)
+                            if sc > beste_score:
+                                beste_lijst = kand
+                                beste_score = sc
+
 
     laad_lijst = beste_lijst
 fig, ax = plt.subplots(figsize=(15, 4.1))
