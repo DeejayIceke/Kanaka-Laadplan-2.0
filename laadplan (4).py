@@ -545,10 +545,10 @@ else:
         for _ in range(d_750):
             lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "kg": 1500})
 
-        # 2. CP3 1000kg (mag naast oneven CP7 2H aansluiten; als er geen oneven CP7 2H is en hij oneven is, zet de laatste centraal zodat volgende groep recht begint)
+        # 2. CP3 1000kg (mag zowel naast oneven CP7 2H als naast IBC aansluiten, maar nooit door elkaar met CP7 1H)
         dubbel_rij = d_600 + mix_600_op_750 + d_750
         for i_z in range(cp3_zwaar):
-            is_laatste_oneven = (i_z == cp3_zwaar - 1) and ((dubbel_rij + cp3_zwaar) % 2 == 1) and (e_600 + e_750 > 0)
+            is_laatste_oneven = (i_z == cp3_zwaar - 1) and ((dubbel_rij + cp3_zwaar) % 2 == 1) and (e_600 + e_750 > 0) and (hoofd_ibc == 0)
             lijst.append({"naam": "CP3", "naam_puur": "CP3", "L": 1150, "B": 1150, "kleur": "#3498db", "force_midden": is_laatste_oneven, "kg": 1000})
 
         # 3. CP7 (1H) — altijd strak bij elkaar, nooit door elkaar met CP3
@@ -748,7 +748,7 @@ else:
         lengte_score = (k_len // 300) if (uitvloeren and past == 1) else -k_len
         enkele_stuks = sum(1 for it in lijst if "(1H)" in it["naam"])
         zw_afwijking = abs(k_zw - 6900) if k_zw > 0 else 0
-        return (past, -h_fouten, lengte_score, trekas_ok, tridem_ok, -enkele_stuks, -zw_afwijking)
+        return (past, -h_fouten, trekas_ok, tridem_ok, -enkele_stuks, lengte_score, -zw_afwijking)
 
     beste_lijst = bereken_variant(0, 0, mag_halveren=False)
     if uitvloeren:
