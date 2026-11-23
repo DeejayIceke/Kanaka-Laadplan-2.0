@@ -990,7 +990,13 @@ if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc +
 else:
     st.info("Container is leeg. Upload een PDF/foto-laadbon of gebruik de + en - knoppen om te beginnen.")
 
+st.divider()
+import magazijn
+magazijn.toon_magazijn_tab()
+
+st.divider()
 with st.expander("📋 Laatste updates & verbeteringen", expanded=False):
+
     st.markdown("""
     * **22-11-2026:**
         * **Keuze 'Uitvloeren' uitgebreid (3 opties):** Kies tussen *Ja (zonder afstapelen)* om de vloer te benutten zonder extra heftruckwerk, *Ja (met afstapelen)* om stapels op te splitsen naar 1-hoog, of *Nee (compact)* om ruimte vrij te houden om bij te laden.
