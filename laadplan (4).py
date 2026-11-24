@@ -1007,8 +1007,11 @@ magazijn.toon_magazijn_tab()
 
 st.divider()
 with st.expander("📋 Laatste updates & verbeteringen", expanded=False):
-
     st.markdown("""
+    * **24-11-2026:**
+        * **Slimmere herkenning bij foto's & gescande PDF's:** Automatische rotatie- en resolutieverbetering (ook voor meerpagina-scans) en automatische correctie via het nettogewicht wanneer een pen-vinkje of kreuk een cijfer deels bedekt.
+        * **Nauwkeurige CP3-gewichtsbepaling:** Bepaalt nu automatisch het juiste palletgewicht (500 kg of 1000 kg bij 2 bigbags op 1 pallet) op basis van het nettogewicht per pallet.
+        * **Symmetrische uitlijning:** Voorkomt uitstekende rijen aan de achterkant door dwarsgeplaatste stapels netjes in evenwicht te houden.
     * **22-11-2026:**
         * **Keuze 'Uitvloeren' uitgebreid (3 opties):** Kies tussen *Ja (zonder afstapelen)* om de vloer te benutten zonder extra heftruckwerk, *Ja (met afstapelen)* om stapels op te splitsen naar 1-hoog, of *Nee (compact)* om ruimte vrij te houden om bij te laden.
         * **Slimme laad- & hoogtevolgorde:** Automatische opbouw van hoog naar laag (**CP7 2H ➔ CP3 1000kg ➔ CP7 1H ➔ CP3 500kg ➔ IBC**), waarbij **IBC's altijd achteraan** bij de deuren blijven voor de tweede laadkaai.
