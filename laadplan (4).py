@@ -91,7 +91,7 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
         if bag_code_m:
             laatste_bag_kg = int(bag_code_m.group(1))
 
-        if re.search(r'PAL\s*[/|1I]?\s*\d{1,2}\.\d{3}', r):
+        if "STACK" in r or re.search(r'PAL\s*[/|1I]?\s*\d{1,2}\.\d{3}', r):
             continue
 
         pal_m = re.search(r'(?<!\d)(\d{1,2})\s*(?:PAL|PA[L1I]|P4L)\b', r)
