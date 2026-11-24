@@ -178,6 +178,8 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
                 witte_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 500
 
     witte_totaal = witte_res["cp3_500"] + witte_res["cp3_1000"] + witte_res["cp7_600"] + witte_res["cp7_750"] + witte_res["ibc"] + witte_res["cp1"]
+
+    witte_totaal = witte_res["cp3_500"] + witte_res["cp3_1000"] + witte_res["cp7_600"] + witte_res["cp7_750"] + witte_res["ibc"] + witte_res["cp1"]
     if not is_foto or (witte_totaal > 0 and res["bon_totaal_pal"] > 0 and witte_totaal == res["bon_totaal_pal"]):
     witte_totaal = witte_res["cp3_500"] + witte_res["cp3_1000"] + witte_res["cp7_600"] + witte_res["cp7_750"] + witte_res["ibc"] + witte_res["cp1"]
     if not is_foto or (witte_totaal > 0 and res["bon_totaal_pal"] > 0 and witte_totaal == res["bon_totaal_pal"]):
