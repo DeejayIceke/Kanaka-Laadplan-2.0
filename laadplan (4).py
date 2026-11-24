@@ -376,109 +376,6 @@ with col5:
         product_info["Maatwerk"]["breedte"] = mw_B
         product_info["Maatwerk"]["gewicht"] = mw_kg
 
-        gelezen_pal = d["cp3_500"] + d["cp3_1000"] + d["cp7_600"] + d["cp7_750"] + d["ibc"] + d.get("cp1", 0)
-        gelezen_bags = d.get("bags", 0)
-        if d["regels"]:
-            label_tot = f"{gelezen_pal} PAL" + (f" + {gelezen_bags} BAGS" if gelezen_bags > 0 else "")
-            st.success(f"✅ **Bon ingelezen ({label_tot}):** {' | '.join(d['regels'])} — **Totaal gewicht:** {d['totaal_gewicht']} kg")
-            if d.get("bon_totaal_pal", 0) > 0 and gelezen_pal != d["bon_totaal_pal"]:
-                st.warning(f"⚠️ Let op: op de bon staat onderaan **{d['bon_totaal_pal']} PAL**, maar er zijn **{gelezen_pal} PAL** herkend. Controleer even de ontbrekende regel.")
-        else:
-            st.warning("⚠️ Bestand gelezen, maar geen regels herkend. Maak een rechtere/scherpere foto of gebruik de SAP-PDF.")
-        with st.expander("🔍 Bekijk uitgelezen tekst van de bon"):
-            st.text(d.get("ruwe_tekst", ""))
-
-st.write("### 1. Kies container / oplegger:")
-container_type = st.selectbox(
-    "1. Kies container:", 
-    ("45ft Container / Bache (13550 x 2426 mm)", "40ft Container (12030 x 2350 mm)", "20ft Container (5898 x 2350 mm)"),
-    label_visibility="collapsed"
-)
-
-max_lengte = 13550 if "45ft" in container_type else 12030 if "40ft" in container_type else 5898
-max_breedte = 2426 if "45ft" in container_type else 2350
-marge_achter = 100
-effectieve_lengte = max_lengte - marge_achter
-
-product_info = {
-    "CP3": {"lengte": 1150, "breedte": 1150, "kleur": "#3498db", "stapelbaar": False, "label": "CP3", "gewicht": 500},
-    "CP7_600": {"lengte": 1400, "breedte": 1100, "kleur": "#2ecc71", "stapelbaar": True, "label": "CP7 600", "gewicht": 600},
-    "CP7_750": {"lengte": 1400, "breedte": 1150, "kleur": "#e74c3c", "stapelbaar": True, "label": "CP7 750", "gewicht": 750},
-    "IBC": {"lengte": 1000, "breedte": 1200, "kleur": "#f1c40f", "stapelbaar": False, "label": "IBC", "gewicht": 1000},
-    "CP1": {"lengte": 1000, "breedte": 1200, "kleur": "#e67e22", "stapelbaar": False, "label": "CP1", "gewicht": 500},
-    "BAGS": {"lengte": 1035, "breedte": 1175, "kleur": "#9b59b6", "stapelbaar": True, "label": "Bags", "gewicht": 45},
-    "Maatwerk": {"lengte": 1000, "breedte": 1000, "kleur": "#7f8c8d", "stapelbaar": False, "label": "Maatwerk", "gewicht": 500}
-}
-
-pdf_d = st.session_state.pdf_data
-init_cp3 = (pdf_d["cp3_500"] + pdf_d["cp3_1000"]) if pdf_d else 0
-init_cp7_600 = pdf_d["cp7_600"] if pdf_d else 0
-init_cp7_750 = pdf_d["cp7_750"] if pdf_d else 0
-init_ibc_cp1 = (pdf_d["ibc"] + pdf_d.get("cp1", 0)) if pdf_d else 0
-init_bags = pdf_d.get("bags", 0) if pdf_d else 0
-init_bags_kg = pdf_d.get("bags_kg_stuk", 45) if pdf_d else 45
-
-col_titel, col_wis = st.columns(2)
-with col_titel: st.write("### 2. Vul aantal pallets / zakken in:")
-with col_wis:
-    if st.button("🗑️ Wis alles", type="primary", use_container_width=True, key="wis_alles_hoofd"):
-        st.session_state.klik_volgorde = []
-        st.session_state.pdf_data = None
-        st.session_state.laatste_pdf_naam = ""
-        st.session_state.reset_id += 1
-        st.rerun()
-    uitvloeren_keuze = st.radio(
-        "Uitvloeren? (vloerlengte benutten):",
-        ("Ja (zonder afstapelen)", "Ja (met afstapelen)", "Nee (compact)"),
-        horizontal=True,
-        key=f"uitvloeren_{st.session_state.reset_id}"
-    )
-    uitvloeren = uitvloeren_keuze.startswith("Ja")
-    mag_afstapelen = (uitvloeren_keuze == "Ja (met afstapelen)")
-
-col1, col2, col3, col4, col5 = st.columns(5)
-
-with col1:
-    st.markdown('<div class="custom-box" style="background-color:#3498db;">CP3 (1150x1150)</div>', unsafe_allow_html=True)
-    in_cp3 = st.number_input("Aantal CP3", min_value=0, value=init_cp3, step=1, key=f"cp3_{st.session_state.reset_id}", label_visibility="collapsed")
-    pallets_cp3 = int(in_cp3) if in_cp3 is not None else 0
-    if pallets_cp3 > 0:
-        default_cp3_kg = 1000 if (pdf_d and pdf_d["cp3_1000"] > pdf_d["cp3_500"]) else 500
-        cp3_kg_stuk = st.selectbox("Gewicht CP3:", (500, 1000), index=0 if default_cp3_kg == 500 else 1, format_func=lambda x: f"{x} kg/pal", key=f"cp3_kg_{st.session_state.reset_id}", label_visibility="collapsed")
-        product_info["CP3"]["gewicht"] = cp3_kg_stuk
-
-with col2:
-    st.markdown('<div class="custom-box" style="background-color:#2ecc71;">CP7 600kg (1400x1100)</div>', unsafe_allow_html=True)
-    in_cp7_600 = st.number_input("Aantal CP7 600", min_value=0, value=init_cp7_600, step=1, key=f"cp7_600_{st.session_state.reset_id}", label_visibility="collapsed")
-    pallets_cp7_600_totaal = int(in_cp7_600) if in_cp7_600 is not None else 0
-
-with col3:
-    st.markdown('<div class="custom-box" style="background-color:#e74c3c;">CP7 750kg (1400x1150)</div>', unsafe_allow_html=True)
-    in_cp7_750 = st.number_input("Aantal CP7 750", min_value=0, value=init_cp7_750, step=1, key=f"cp7_750_{st.session_state.reset_id}", label_visibility="collapsed")
-    pallets_cp7_750_totaal = int(in_cp7_750) if in_cp7_750 is not None else 0
-
-ibc_cp1_type = "IBC"
-with col4:
-    st.markdown('<div class="custom-box" style="background-color:#f1c40f; color:black;">IBC / CP1 (1000x1200)</div>', unsafe_allow_html=True)
-    in_ibc = st.number_input("Aantal IBC / CP1", min_value=0, value=init_ibc_cp1, step=1, key=f"ibc_{st.session_state.reset_id}", label_visibility="collapsed")
-    pallets_ibc = int(in_ibc) if in_ibc is not None else 0
-    if pallets_ibc > 0:
-        default_cp1 = 1 if (pdf_d and pdf_d.get("cp1", 0) > pdf_d.get("ibc", 0)) else 0
-        ibc_keuze = st.selectbox("Type IBC / CP1:", (1000, 500), index=default_cp1, format_func=lambda x: "1000 kg (IBC)" if x == 1000 else "500 kg (CP1)", key=f"ibc_type_{st.session_state.reset_id}", label_visibility="collapsed")
-        ibc_cp1_type = "CP1" if ibc_keuze == 500 else "IBC"
-
-with col5:
-    st.markdown('<div class="custom-box" style="background-color:#7f8c8d;">Maatwerk 📐</div>', unsafe_allow_html=True)
-    in_mw = st.number_input("Aantal Maatwerk", min_value=0, value=0, step=1, key=f"mw_{st.session_state.reset_id}", label_visibility="collapsed")
-    pallets_mw = int(in_mw) if in_mw is not None else 0
-    if pallets_mw > 0:
-        mw_L = st.number_input("L (mm):", min_value=1, value=1000, step=10, key=f"mw_l_{st.session_state.reset_id}") or 1000
-        mw_B = st.number_input("B (mm):", min_value=1, value=1000, step=10, key=f"mw_b_{st.session_state.reset_id}") or 1000
-        mw_kg = st.number_input("Gewicht (kg):", min_value=1, value=500, step=50, key=f"mw_kg_{st.session_state.reset_id}") or 500
-        product_info["Maatwerk"]["lengte"] = mw_L
-        product_info["Maatwerk"]["breedte"] = mw_B
-        product_info["Maatwerk"]["gewicht"] = mw_kg
-
 laad_lijst = []
 
 def haal_pallet_kleur(art_naam, overgebleven, standaard_kleur):
@@ -625,7 +522,7 @@ else:
         return lijst
 
     def simuleer_lengte_trekas_zw(lijst):
-        xo, xb, bo, bb, ibc_t, i = 0, 0, 0, 0, 0, 0
+        xo, xb, bo, bb, geschr_t, i = 0, 0, 0, 0, 0, 0
         hoogte_o, hoogte_b, hoogte_fouten = 0, 0, 0
         blokken = []
         while i < len(lijst):
@@ -638,10 +535,10 @@ else:
                 bo, bb, hoogte_o, hoogte_b = 0, 0, 0, 0
                 i += 1
                 continue
-            if max_breedte == 2350 and it["naam_puur"] == "IBC" and (i + 1 < len(lijst) and lijst[i + 1]["naam_puur"] == "IBC"):
-                if ibc_t % 2 == 0:
-                    x1 = max(xo, xb) if ibc_t == 0 else xo
-                    x2 = max(xo, xb) if ibc_t == 0 else xb
+            if it.get("geschrankt") and (i + 1 < len(lijst) and lijst[i + 1].get("geschrankt") and not lijst[i + 1].get("force_midden")):
+                if geschr_t % 2 == 0:
+                    x1 = max(xo, xb) if geschr_t == 0 else xo
+                    x2 = max(xo, xb) if geschr_t == 0 else xb
                     blokken.append({"x_mid": x1 + 500, "kg": it["kg"]})
                     blokken.append({"x_mid": x2 + 600, "kg": lijst[i + 1]["kg"]})
                     xo, xb = x1 + 1000, x2 + 1200
@@ -652,7 +549,7 @@ else:
                     xo, xb = xo + 1200, xb + 1000
                     bo, bb = 1000, 1200
                 hoogte_o, hoogte_b = 0, 0
-                ibc_t += 1
+                geschr_t += 1
                 i += 2
                 continue
             if xo <= xb:
@@ -850,21 +747,22 @@ while idx < len(laad_lijst):
         idx += 1
         continue
 
-    if max_breedte == 2350 and item["naam_puur"] == "IBC":
-        heeft_partner = (idx + 1 < len(laad_lijst) and laad_lijst[idx+1]["naam_puur"] == "IBC" and not laad_lijst[idx+1]["force_midden"])
+    if item.get("geschrankt"):
+        heeft_partner = (idx + 1 < len(laad_lijst) and laad_lijst[idx+1].get("geschrankt") and not laad_lijst[idx+1]["force_midden"])
         if heeft_partner:
             kg_1, kg_2 = item["kg"], laad_lijst[idx+1]["kg"]
+            lbl_1, lbl_2 = item["naam"], laad_lijst[idx+1]["naam"]
             if ibc_paar_teller % 2 == 0:
                 x_pos_onder = max(x_onder, x_boven) if ibc_paar_teller == 0 else x_onder
                 vulling_kleur1 = "#ff0000" if (x_pos_onder + 1000 > max_lengte) else item["kleur"]
                 ax.add_patch(patches.Rectangle((x_pos_onder, 20), 1000, 1200, linewidth=1, edgecolor='white', facecolor=vulling_kleur1, alpha=0.85))
-                ax.text(x_pos_onder + 500, 20 + 600, f"IBC (Breed)\n{kg_1} kg", color="black", weight="bold", ha="center", va="center", fontsize=9.5)
+                ax.text(x_pos_onder + 500, 20 + 600, f"{lbl_1} (Breed)\n{kg_1} kg", color="black", weight="bold", ha="center", va="center", fontsize=9)
                 geplaatste_blokken.append({"x_mid": x_pos_onder + 500, "kg": kg_1})
 
                 x_pos_boven = max(x_onder, x_boven) if ibc_paar_teller == 0 else x_boven
                 vulling_kleur2 = "#ff0000" if (x_pos_boven + 1200 > max_lengte) else item["kleur"]
                 ax.add_patch(patches.Rectangle((x_pos_boven, max_breedte - 1000 - 20), 1200, 1000, linewidth=1, edgecolor='white', facecolor=vulling_kleur2, alpha=0.85))
-                ax.text(x_pos_boven + 600, max_breedte - 1000 - 20 + 500, f"IBC (Lang)\n{kg_2} kg", color="black", weight="bold", ha="center", va="center", fontsize=9.5)
+                ax.text(x_pos_boven + 600, max_breedte - 1000 - 20 + 500, f"{lbl_2} (Lang)\n{kg_2} kg", color="black", weight="bold", ha="center", va="center", fontsize=9)
                 geplaatste_blokken.append({"x_mid": x_pos_boven + 600, "kg": kg_2})
 
                 x_onder, x_boven = x_pos_onder + 1000, x_pos_boven + 1200
@@ -872,12 +770,12 @@ while idx < len(laad_lijst):
             else:
                 vulling_kleur1 = "#ff0000" if (x_onder + 1200 > max_lengte) else item["kleur"]
                 ax.add_patch(patches.Rectangle((x_onder, 20), 1200, 1000, linewidth=1, edgecolor='white', facecolor=vulling_kleur1, alpha=0.85))
-                ax.text(x_onder + 600, 20 + 500, f"IBC (Lang)\n{kg_1} kg", color="black", weight="bold", ha="center", va="center", fontsize=9.5)
+                ax.text(x_onder + 600, 20 + 500, f"{lbl_1} (Lang)\n{kg_1} kg", color="black", weight="bold", ha="center", va="center", fontsize=9)
                 geplaatste_blokken.append({"x_mid": x_onder + 600, "kg": kg_1})
 
                 vulling_kleur2 = "#ff0000" if (x_boven + 1000 > max_lengte) else item["kleur"]
                 ax.add_patch(patches.Rectangle((x_boven, max_breedte - 1200 - 20), 1000, 1200, linewidth=1, edgecolor='white', facecolor=vulling_kleur2, alpha=0.85))
-                ax.text(x_boven + 500, max_breedte - 1200 - 20 + 600, f"IBC (Breed)\n{kg_2} kg", color="black", weight="bold", ha="center", va="center", fontsize=9.5)
+                ax.text(x_boven + 500, max_breedte - 1200 - 20 + 600, f"{lbl_2} (Breed)\n{kg_2} kg", color="black", weight="bold", ha="center", va="center", fontsize=9)
                 geplaatste_blokken.append({"x_mid": x_boven + 500, "kg": kg_2})
 
                 x_onder, x_boven = x_onder + 1200, x_boven + 1000
