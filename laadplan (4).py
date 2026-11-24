@@ -93,9 +93,9 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
         if re.search(r'PAL\s*/', r):
             continue
 
-        pal_m = re.search(r'(\d{1,2})\s*(?:PAL|PA[L1I])\b', r)
-        bag_m = re.search(r'(\d{1,3})\s*BAG\b', r)
-        kg_m = re.search(r'([\d\.,]+)\s*KG\b', r)
+        pal_m = re.search(r'(?<!\d)(\d{1,2})\s*(?:PAL|PA[L1I]|P4L)\b', r)
+        bag_m = re.search(r'(?<!\d)(\d{1,3})\s*(?:BAG|8AG)\b', r)
+        kg_m = re.search(r'([\d\.,]+)\s*(?:KG|K6)\b', r)
 
         gewicht_kg = 0
         if kg_m:
