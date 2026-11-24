@@ -77,21 +77,36 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
         if re.search(r'PAL\s*/', r):
             continue
 
-        pal_m = re.search(r'(?:^|[^\d])(\d{1,2})\s*(?:PAL|PA[L1I])\b', r)
+        pal_m = re.search(r'(\d{1,2})\s*(?:PAL|PA[L1I])\b', r)
         kg_m = re.search(r'([\d\.,]+)\s*KG\b', r)
 
-        if pal_m and laatste_type:
-            aantal_pal = int(pal_m.group(1))
-            gewicht_kg = 0
-            if kg_m:
-                try:
-                    gewicht_kg = int(float(kg_m.group(1).replace(".", "").replace(",", ".")))
-                except ValueError:
-                    gewicht_kg = 0
+        gewicht_kg = 0
+        if kg_m:
+            try:
+                gewicht_kg = int(float(kg_m.group(1).replace(".", "").replace(",", ".")))
+            except ValueError:
+                gewicht_kg = 0
 
-            # Controleer en corrigeer OCR-leesfouten (bv. 17 gelezen als 12) via het nettogewicht
+        aantal_pal = int(pal_m.group(1)) if pal_m else 0
+
+        # Als een pen-vinkje het aantal PAL onleesbaar maakte, bereken het uit het nettogewicht
+        if aantal_pal == 0 and gewicht_kg >= 500 and laatste_type and ("BAG" in r or "KG" in r):
+            if laatste_type in ("IBC", "CP3_1000") and gewicht_kg % 1000 == 0:
+                aantal_pal = gewicht_kg // 1000
+            elif laatste_type == "CP7":
+                if gewicht_kg % 600 == 0:
+                    aantal_pal = gewicht_kg // 600
+                elif gewicht_kg % 750 == 0:
+                    aantal_pal = gewicht_kg // 750
+            elif laatste_type == "CP3_500":
+                if gewicht_kg % 1000 == 0:
+                    aantal_pal = gewicht_kg // 1000
+                elif gewicht_kg % 500 == 0:
+                    aantal_pal = gewicht_kg // 500
+
+        if aantal_pal > 0 and laatste_type:
             if gewicht_kg > 0:
-                mogelijke_gewichten = (1000,) if laatste_type in ("IBC", "CP3_1000") else ((750, 600) if laatste_type == "CP7" else (500, 1000))
+                mogelijke_gewichten = (1000,) if laatste_type in ("IBC", "CP3_1000") else ((750, 600) if laatste_type == "CP7" else (1000, 500))
                 if not any(gewicht_kg == aantal_pal * w for w in mogelijke_gewichten):
                     for w in mogelijke_gewichten:
                         if gewicht_kg % w == 0 and 1 <= (gewicht_kg // w) <= 60:
@@ -120,7 +135,7 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
                 witte_res["regels"].append(f"{aantal_pal}x CP3 1000kg")
             elif laatste_type == "CP3_500":
                 kg_p = (gewicht_kg / aantal_pal) if gewicht_kg > 0 else 500
-                if kg_p > 750 and "-SB5" not in r:
+                if kg_p > 750:
                     witte_res["cp3_1000"] += aantal_pal
                     witte_res["regels"].append(f"{aantal_pal}x CP3 1000kg")
                 else:
@@ -132,6 +147,7 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
     if not is_foto or (witte_totaal > 0 and (res["bon_totaal_pal"] == 0 or witte_totaal == res["bon_totaal_pal"])):
         res.update(witte_res)
         return res
+
     kop_res = {"cp3_500": 0, "cp3_1000": 0, "cp7_600": 0, "cp7_750": 0, "ibc": 0, "totaal_gewicht": 0, "regels": []}
     for idx, r in enumerate(regels):
         if "ITEMS TOTAL" in r or "ITEM TOTAL" in r:
@@ -170,15 +186,13 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
             is_sb5 = any(c in context for c in ("-SB5", "-S85", "-SBS"))
             is_sb1 = any(c in context for c in ("-SB1", "-S81"))
             if gewicht_kg > 0:
-                verwacht = 500 if is_sb5 else 1000
+                verwacht = 500 if (is_sb5 and gewicht_kg % 1000 != 0) else 1000
                 if abs((gewicht_kg / max(1, aantal_pal)) - verwacht) > 150:
-                    if is_sb5 and gewicht_kg % 500 == 0:
-                        aantal_pal = gewicht_kg // 500
-                    elif gewicht_kg % 1000 == 0:
+                    if gewicht_kg % 1000 == 0:
                         aantal_pal = gewicht_kg // 1000
                     elif gewicht_kg % 500 == 0:
                         aantal_pal = gewicht_kg // 500
-            if is_sb1 or (not is_sb5 and gewicht_kg > 0 and (gewicht_kg / max(1, aantal_pal)) > 750):
+            if is_sb1 or (gewicht_kg > 0 and (gewicht_kg / max(1, aantal_pal)) > 750):
                 kop_res["cp3_1000"] += aantal_pal
                 kop_res["regels"].append(f"{aantal_pal}x CP3 1000kg")
                 kop_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 1000
@@ -190,6 +204,7 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
     kop_totaal = kop_res["cp3_500"] + kop_res["cp3_1000"] + kop_res["cp7_600"] + kop_res["cp7_750"] + kop_res["ibc"]
     res.update(kop_res if kop_totaal > witte_totaal else witte_res)
     return res
+
 try:
     import pypdfium2 as pdfium
     PDFIUM_BESCHIKBAAR = True
