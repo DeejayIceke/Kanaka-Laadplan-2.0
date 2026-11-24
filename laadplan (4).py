@@ -303,16 +303,17 @@ def beste_ocr_tekst_van_beeld(afbeelding):
     beste_tekst, beste_score = "", (-1, -1)
     for hoek in (0, 90, 180, 270):
         gedraaid = afbeelding.rotate(hoek, expand=True) if hoek != 0 else afbeelding
-     rood_kanaal = gedraaid.split()
-     grijs = ImageOps.autocontrast(rood_kanaal.filter(ImageFilter.SHARPEN), cutoff=2)
+        rood_kanaal = gedraaid.split()[0]
+        grijs = ImageOps.autocontrast(rood_kanaal.filter(ImageFilter.SHARPEN), cutoff=2)
         tekst = pytesseract.image_to_string(grijs, config="--psm 6")
         r = verwerk_laadbon_tekst(tekst, is_foto=True)
-        tot_pal = r["cp3_500"] + r["cp3_1000"] + r["cp7_600"] + r["cp7_750"] + r["ibc"]
+        tot_pal = r["cp3_500"] + r["cp3_1000"] + r["cp7_600"] + r["cp7_750"] + r["ibc"] + r.get("cp1", 0) + r.get("bags", 0)
         trefwoorden = sum(1 for k in ("PAL", "KG", "ITEM", "DELIVERY", "TOTAL", "CP-", "CNPE") if k in tekst.upper())
         score = (tot_pal, trefwoorden)
         if score > beste_score:
             beste_score, beste_tekst = score, tekst
     return beste_tekst
+
 
 def lees_kaneka_bestand(bestand):
     naam = bestand.name.lower()
