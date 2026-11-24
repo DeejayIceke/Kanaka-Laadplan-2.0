@@ -376,7 +376,15 @@ with col5:
         product_info["Maatwerk"]["breedte"] = mw_B
         product_info["Maatwerk"]["gewicht"] = mw_kg
 
-b_col1, b_col2, _ = st.columns((1.5, 1.5, 2.0))
+b_col1, _ = st.columns((1.5, 3.5))
+with b_col1:
+    st.markdown('<div class="custom-box" style="background-color:#9b59b6;">Losse Bags (zonder pallet — 2x2)</div>', unsafe_allow_html=True)
+    in_bags = st.number_input("Aantal Losse Bags", min_value=0, value=init_bags, step=1, key=f"bags_{st.session_state.reset_id}", label_visibility="collapsed")
+    aantal_bags = int(in_bags) if in_bags is not None else 0
+    if aantal_bags > 0:
+        in_bags_kg = st.number_input("Gewicht per bag (kg):", min_value=1, value=init_bags_kg, step=5, key=f"bags_kg_{st.session_state.reset_id}")
+        product_info["BAGS"]["gewicht"] = int(in_bags_kg) if in_bags_kg else 45
+
 with b_col1:
     st.markdown('<div class="custom-box" style="background-color:#9b59b6;">Losse Bags (zonder pallet — 2x2 per rij)</div>', unsafe_allow_html=True)
     in_bags = st.number_input("Aantal Losse Bags", min_value=0, value=init_bags, step=1, key=f"bags_{st.session_state.reset_id}", label_visibility="collapsed")
