@@ -193,8 +193,9 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
         "regels": [r for r in witte_res["regels"] if "Losse Bags" in r]
     }
     for idx_r, r in enumerate(regels):
-        if "ITEMS TOTAL" in r or "ITEM TOTAL" in r:
+        if "ITEMS TOTAL" in r or "ITEM TOTAL" in r or "TOTAAL" in r or (re.search(r'\b\d{1,2}\s*PAL\b', r) and re.search(r'\b\d{1,3}\s*BAG\b', r) and not re.search(r'\b\d{3}[A-Z]\d{5}[A-Z0-9]\b', r)):
             continue
+
         kop_match = re.search(r'(\d{1,2})\s*(?:PAL|PA[L1I]|P4L)\s*/\s*([\d\.,]+)\s*(?:KG|K6)', r)
         if not kop_match:
             continue
