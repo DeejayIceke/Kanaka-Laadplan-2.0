@@ -70,9 +70,14 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
     for r in regels:
         if "ITEMS TOTAL" in r or "ITEM TOTAL" in r or "TOTAAL" in r:
             continue
+
+        # Nieuwe sectiekop reset het vorige bloktype
+        if "STACK." in r or "PACKAGING" in r:
+            laatste_type = None
+
         if "CNPE" in r or "IBC" in r:
             laatste_type = "IBC"
-        elif any(c in r for c in ("CP-7", "CP7", "-NB", "-N8", "PA210", "1,4X1,2")):
+        elif any(c in r for c in ("CP-7", "CP7", "-NB", "-N8", "PA210", "PA121", "1,4X1,2")):
             laatste_type = "CP7"
         elif any(c in r for c in ("-SB1", "-S81")):
             laatste_type = "CP3_1000"
@@ -99,26 +104,29 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
             except ValueError:
                 gewicht_kg = 0
 
-        # Losse bags zonder PAL op de regel
-        if not pal_m and bag_m and ("BAG" in r and not any(x in r for x in ("CP-7", "CP7", "CP-3", "CP3", "IBC", "CNPE"))):
+        # Alleen echte losse bigbags (geen PAL op de regel, niet onder CP7/CP3/IBC-kop, en >= 35 kg per bag)
+        if not pal_m and bag_m and gewicht_kg > 0 and laatste_type not in ("CP7", "CP3_500", "CP3_1000", "IBC"):
             aantal_bags = int(bag_m.group(1))
-            if 1 <= aantal_bags <= 200:
-                kg_stuk = round(gewicht_kg / aantal_bags) if gewicht_kg > 0 else laatste_bag_kg
-                witte_res["bags"] += aantal_bags
-                witte_res["bags_kg_stuk"] = kg_stuk
-                witte_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_bags * kg_stuk
-                witte_res["regels"].append(f"{aantal_bags}x Losse Bags ({kg_stuk}kg)")
-                continue
+            if 1 <= aantal_bags <= 120:
+                kg_stuk = round(gewicht_kg / aantal_bags)
+                if kg_stuk >= 35:
+                    witte_res["bags"] += aantal_bags
+                    witte_res["bags_kg_stuk"] = kg_stuk
+                    witte_res["totaal_gewicht"] += gewicht_kg
+                    witte_res["regels"].append(f"{aantal_bags}x Losse Bags ({kg_stuk}kg)")
+                    continue
 
         aantal_pal = int(pal_m.group(1)) if pal_m else 0
         if aantal_pal == 0 and gewicht_kg >= 500 and laatste_type and ("BAG" in r or "KG" in r):
             if laatste_type in ("IBC", "CP3_1000") and gewicht_kg % 1000 == 0:
                 aantal_pal = gewicht_kg // 1000
             elif laatste_type == "CP7":
-                if gewicht_kg % 600 == 0:
-                    aantal_pal = gewicht_kg // 600
-                elif gewicht_kg % 750 == 0:
+                if gewicht_kg % 750 == 0 and gewicht_kg % 600 != 0:
                     aantal_pal = gewicht_kg // 750
+                elif gewicht_kg % 600 == 0 and gewicht_kg % 750 != 0:
+                    aantal_pal = gewicht_kg // 600
+                elif gewicht_kg % 600 == 0:
+                    aantal_pal = gewicht_kg // 600
             elif laatste_type in ("CP3_500", "CP1"):
                 if gewicht_kg % 1000 == 0 and laatste_type != "CP1":
                     aantal_pal = gewicht_kg // 1000
@@ -171,6 +179,7 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
 
     res.update(witte_res)
     return res
+
 
 try:
     import pypdfium2 as pdfium
