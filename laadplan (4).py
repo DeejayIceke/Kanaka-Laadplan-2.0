@@ -48,7 +48,8 @@ css_en_header = (
 st.markdown(css_en_header, unsafe_allow_html=True)
 def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
     res = {
-        "cp3_500": 0, "cp3_1000": 0, "cp7_600": 0, "cp7_750": 0, "ibc": 0,
+        "cp3_500": 0, "cp3_1000": 0, "cp7_600": 0, "cp7_750": 0, "ibc": 0, "cp1": 0,
+        "bags": 0, "bags_kg_stuk": 45,
         "totaal_gewicht": 0, "bon_totaal_pal": 0, "regels": [], "ruwe_tekst": volledige_tekst
     }
     regels = [r.upper().strip() for r in volledige_tekst.splitlines() if r.strip()]
@@ -59,8 +60,12 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
             if tot_m:
                 res["bon_totaal_pal"] = int(tot_m.group(1))
 
-    witte_res = {"cp3_500": 0, "cp3_1000": 0, "cp7_600": 0, "cp7_750": 0, "ibc": 0, "totaal_gewicht": 0, "regels": []}
+    witte_res = {
+        "cp3_500": 0, "cp3_1000": 0, "cp7_600": 0, "cp7_750": 0, "ibc": 0, "cp1": 0,
+        "bags": 0, "bags_kg_stuk": 45, "totaal_gewicht": 0, "regels": []
+    }
     laatste_type = None
+    laatste_bag_kg = 45
 
     for r in regels:
         if "ITEMS TOTAL" in r or "ITEM TOTAL" in r or "TOTAAL" in r:
@@ -73,11 +78,18 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
             laatste_type = "CP3_1000"
         elif any(c in r for c in ("CP-3", "CP3", "-SB5", "-S85", "B580", "B382", "1,2X1,2")):
             laatste_type = "CP3_500"
+        elif any(c in r for c in ("CP-1", "CP1", "1,2X1,0", "1,2X1M")):
+            laatste_type = "CP1"
+
+        bag_code_m = re.search(r'\bB(\d{2,3})\b', r)
+        if bag_code_m:
+            laatste_bag_kg = int(bag_code_m.group(1))
 
         if re.search(r'PAL\s*/', r):
             continue
 
         pal_m = re.search(r'(\d{1,2})\s*(?:PAL|PA[L1I])\b', r)
+        bag_m = re.search(r'(\d{1,3})\s*BAG\b', r)
         kg_m = re.search(r'([\d\.,]+)\s*KG\b', r)
 
         gewicht_kg = 0
@@ -87,9 +99,18 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
             except ValueError:
                 gewicht_kg = 0
 
-        aantal_pal = int(pal_m.group(1)) if pal_m else 0
+        # Losse bags zonder PAL op de regel
+        if not pal_m and bag_m and ("BAG" in r and not any(x in r for x in ("CP-7", "CP7", "CP-3", "CP3", "IBC", "CNPE"))):
+            aantal_bags = int(bag_m.group(1))
+            if 1 <= aantal_bags <= 200:
+                kg_stuk = round(gewicht_kg / aantal_bags) if gewicht_kg > 0 else laatste_bag_kg
+                witte_res["bags"] += aantal_bags
+                witte_res["bags_kg_stuk"] = kg_stuk
+                witte_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_bags * kg_stuk
+                witte_res["regels"].append(f"{aantal_bags}x Losse Bags ({kg_stuk}kg)")
+                continue
 
-        # Als een pen-vinkje het aantal PAL onleesbaar maakte, bereken het uit het nettogewicht
+        aantal_pal = int(pal_m.group(1)) if pal_m else 0
         if aantal_pal == 0 and gewicht_kg >= 500 and laatste_type and ("BAG" in r or "KG" in r):
             if laatste_type in ("IBC", "CP3_1000") and gewicht_kg % 1000 == 0:
                 aantal_pal = gewicht_kg // 1000
@@ -98,15 +119,16 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
                     aantal_pal = gewicht_kg // 600
                 elif gewicht_kg % 750 == 0:
                     aantal_pal = gewicht_kg // 750
-            elif laatste_type == "CP3_500":
-                if gewicht_kg % 1000 == 0:
+            elif laatste_type in ("CP3_500", "CP1"):
+                if gewicht_kg % 1000 == 0 and laatste_type != "CP1":
                     aantal_pal = gewicht_kg // 1000
                 elif gewicht_kg % 500 == 0:
                     aantal_pal = gewicht_kg // 500
 
-        if aantal_pal > 0 and laatste_type:
+        if aantal_pal > 0:
+            actief_type = laatste_type if laatste_type else ("CP1" if (gewicht_kg > 0 and gewicht_kg / aantal_pal <= 550) else "IBC")
             if gewicht_kg > 0:
-                mogelijke_gewichten = (1000,) if laatste_type in ("IBC", "CP3_1000") else ((750, 600) if laatste_type == "CP7" else (1000, 500))
+                mogelijke_gewichten = (1000,) if actief_type in ("IBC", "CP3_1000") else ((500,) if actief_type == "CP1" else ((750, 600) if actief_type == "CP7" else (1000, 500)))
                 if not any(gewicht_kg == aantal_pal * w for w in mogelijke_gewichten):
                     for w in mogelijke_gewichten:
                         if gewicht_kg % w == 0 and 1 <= (gewicht_kg // w) <= 60:
@@ -116,11 +138,15 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
             if aantal_pal <= 0 or aantal_pal > 60:
                 continue
 
-            if laatste_type == "IBC":
+            if actief_type == "CP1":
+                witte_res["cp1"] += aantal_pal
+                witte_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 500
+                witte_res["regels"].append(f"{aantal_pal}x CP1 500kg")
+            elif actief_type == "IBC":
                 witte_res["ibc"] += aantal_pal
                 witte_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 1000
                 witte_res["regels"].append(f"{aantal_pal}x IBC")
-            elif laatste_type == "CP7":
+            elif actief_type == "CP7":
                 kg_p = (gewicht_kg / aantal_pal) if gewicht_kg > 0 else 600
                 if kg_p > 650:
                     witte_res["cp7_750"] += aantal_pal
@@ -129,11 +155,11 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
                     witte_res["cp7_600"] += aantal_pal
                     witte_res["regels"].append(f"{aantal_pal}x CP7 600kg")
                 witte_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 600
-            elif laatste_type == "CP3_1000":
+            elif actief_type == "CP3_1000":
                 witte_res["cp3_1000"] += aantal_pal
                 witte_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 1000
                 witte_res["regels"].append(f"{aantal_pal}x CP3 1000kg")
-            elif laatste_type == "CP3_500":
+            elif actief_type == "CP3_500":
                 kg_p = (gewicht_kg / aantal_pal) if gewicht_kg > 0 else 500
                 if kg_p > 750:
                     witte_res["cp3_1000"] += aantal_pal
@@ -143,66 +169,7 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
                     witte_res["regels"].append(f"{aantal_pal}x CP3 500kg")
                 witte_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 500
 
-    witte_totaal = witte_res["cp3_500"] + witte_res["cp3_1000"] + witte_res["cp7_600"] + witte_res["cp7_750"] + witte_res["ibc"]
-    if not is_foto or (witte_totaal > 0 and (res["bon_totaal_pal"] == 0 or witte_totaal == res["bon_totaal_pal"])):
-        res.update(witte_res)
-        return res
-
-    kop_res = {"cp3_500": 0, "cp3_1000": 0, "cp7_600": 0, "cp7_750": 0, "ibc": 0, "totaal_gewicht": 0, "regels": []}
-    for idx, r in enumerate(regels):
-        if "ITEMS TOTAL" in r or "ITEM TOTAL" in r:
-            continue
-        kop_match = re.search(r'(\d+)\s*(?:PAL|PA[L1I])\s*/\s*([\d\.,]+)\s*KG', r)
-        if not kop_match:
-            continue
-        aantal_pal = int(kop_match.group(1))
-        try:
-            gewicht_kg = int(float(kop_match.group(2).replace(".", "").replace(",", ".")))
-        except ValueError:
-            gewicht_kg = 0
-
-        context = " ".join(regels[max(0, idx - 1):min(len(regels), idx + 3)])
-        if "CNPE" in context or "IBC" in context:
-            if gewicht_kg > 0 and gewicht_kg % 1000 == 0 and (gewicht_kg // 1000) > aantal_pal:
-                aantal_pal = gewicht_kg // 1000
-            kop_res["ibc"] += aantal_pal
-            kop_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 1000
-            kop_res["regels"].append(f"{aantal_pal}x IBC")
-        elif "CP-7" in context or "CP7" in context or "-NB" in context or "-N8" in context or "1,4X1,2" in context:
-            if gewicht_kg > 0:
-                if gewicht_kg % 600 == 0 and abs(gewicht_kg / max(1, aantal_pal) - 600) > 100:
-                    aantal_pal = gewicht_kg // 600
-                elif gewicht_kg % 750 == 0 and abs(gewicht_kg / max(1, aantal_pal) - 750) > 100:
-                    aantal_pal = gewicht_kg // 750
-            kg_p = (gewicht_kg / aantal_pal) if gewicht_kg > 0 else 600
-            if kg_p > 650:
-                kop_res["cp7_750"] += aantal_pal
-                kop_res["regels"].append(f"{aantal_pal}x CP7 750kg")
-            else:
-                kop_res["cp7_600"] += aantal_pal
-                kop_res["regels"].append(f"{aantal_pal}x CP7 600kg")
-            kop_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 600
-        else:
-            is_sb5 = any(c in context for c in ("-SB5", "-S85", "-SBS"))
-            is_sb1 = any(c in context for c in ("-SB1", "-S81"))
-            if gewicht_kg > 0:
-                verwacht = 500 if (is_sb5 and gewicht_kg % 1000 != 0) else 1000
-                if abs((gewicht_kg / max(1, aantal_pal)) - verwacht) > 150:
-                    if gewicht_kg % 1000 == 0:
-                        aantal_pal = gewicht_kg // 1000
-                    elif gewicht_kg % 500 == 0:
-                        aantal_pal = gewicht_kg // 500
-            if is_sb1 or (gewicht_kg > 0 and (gewicht_kg / max(1, aantal_pal)) > 750):
-                kop_res["cp3_1000"] += aantal_pal
-                kop_res["regels"].append(f"{aantal_pal}x CP3 1000kg")
-                kop_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 1000
-            else:
-                kop_res["cp3_500"] += aantal_pal
-                kop_res["regels"].append(f"{aantal_pal}x CP3 500kg")
-                kop_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 500
-
-    kop_totaal = kop_res["cp3_500"] + kop_res["cp3_1000"] + kop_res["cp7_600"] + kop_res["cp7_750"] + kop_res["ibc"]
-    res.update(kop_res if kop_totaal > witte_totaal else witte_res)
+    res.update(witte_res)
     return res
 
 try:
@@ -306,9 +273,11 @@ with st.expander("📄 Laadbon importeren (PDF of Foto) — Automatisch invullen
 
     if st.session_state.pdf_data:
         d = st.session_state.pdf_data
-        gelezen_pal = d["cp3_500"] + d["cp3_1000"] + d["cp7_600"] + d["cp7_750"] + d["ibc"]
+        gelezen_pal = d["cp3_500"] + d["cp3_1000"] + d["cp7_600"] + d["cp7_750"] + d["ibc"] + d.get("cp1", 0)
+        gelezen_bags = d.get("bags", 0)
         if d["regels"]:
-            st.success(f"✅ **Bon ingelezen ({gelezen_pal} PAL):** {' | '.join(d['regels'])} — **Totaal gewicht:** {d['totaal_gewicht']} kg")
+            label_tot = f"{gelezen_pal} PAL" + (f" + {gelezen_bags} BAGS" if gelezen_bags > 0 else "")
+            st.success(f"✅ **Bon ingelezen ({label_tot}):** {' | '.join(d['regels'])} — **Totaal gewicht:** {d['totaal_gewicht']} kg")
             if d.get("bon_totaal_pal", 0) > 0 and gelezen_pal != d["bon_totaal_pal"]:
                 st.warning(f"⚠️ Let op: op de bon staat onderaan **{d['bon_totaal_pal']} PAL**, maar er zijn **{gelezen_pal} PAL** herkend. Controleer even de ontbrekende regel.")
         else:
@@ -333,6 +302,8 @@ product_info = {
     "CP7_600": {"lengte": 1400, "breedte": 1100, "kleur": "#2ecc71", "stapelbaar": True, "label": "CP7 600", "gewicht": 600},
     "CP7_750": {"lengte": 1400, "breedte": 1150, "kleur": "#e74c3c", "stapelbaar": True, "label": "CP7 750", "gewicht": 750},
     "IBC": {"lengte": 1000, "breedte": 1200, "kleur": "#f1c40f", "stapelbaar": False, "label": "IBC", "gewicht": 1000},
+    "CP1": {"lengte": 1000, "breedte": 1200, "kleur": "#e67e22", "stapelbaar": False, "label": "CP1", "gewicht": 500},
+    "BAGS": {"lengte": 1035, "breedte": 1175, "kleur": "#9b59b6", "stapelbaar": True, "label": "Bags", "gewicht": 45},
     "Maatwerk": {"lengte": 1000, "breedte": 1000, "kleur": "#7f8c8d", "stapelbaar": False, "label": "Maatwerk", "gewicht": 500}
 }
 
@@ -340,10 +311,12 @@ pdf_d = st.session_state.pdf_data
 init_cp3 = (pdf_d["cp3_500"] + pdf_d["cp3_1000"]) if pdf_d else 0
 init_cp7_600 = pdf_d["cp7_600"] if pdf_d else 0
 init_cp7_750 = pdf_d["cp7_750"] if pdf_d else 0
-init_ibc = pdf_d["ibc"] if pdf_d else 0
+init_ibc_cp1 = (pdf_d["ibc"] + pdf_d.get("cp1", 0)) if pdf_d else 0
+init_bags = pdf_d.get("bags", 0) if pdf_d else 0
+init_bags_kg = pdf_d.get("bags_kg_stuk", 45) if pdf_d else 45
 
 col_titel, col_wis = st.columns(2)
-with col_titel: st.write("### 2. Vul aantal pallets in:")
+with col_titel: st.write("### 2. Vul aantal pallets / zakken in:")
 with col_wis:
     if st.button("🗑️ Wis alles", type="primary", use_container_width=True, key="wis_alles_hoofd"):
         st.session_state.klik_volgorde = []
@@ -367,7 +340,6 @@ with col1:
     in_cp3 = st.number_input("Aantal CP3", min_value=0, value=init_cp3, step=1, key=f"cp3_{st.session_state.reset_id}", label_visibility="collapsed")
     pallets_cp3 = int(in_cp3) if in_cp3 is not None else 0
     if pallets_cp3 > 0:
-        if "CP3" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP3")
         default_cp3_kg = 1000 if (pdf_d and pdf_d["cp3_1000"] > pdf_d["cp3_500"]) else 500
         cp3_kg_stuk = st.selectbox("Gewicht CP3:", (500, 1000), index=0 if default_cp3_kg == 500 else 1, format_func=lambda x: f"{x} kg/pal", key=f"cp3_kg_{st.session_state.reset_id}", label_visibility="collapsed")
         product_info["CP3"]["gewicht"] = cp3_kg_stuk
@@ -382,18 +354,21 @@ with col3:
     in_cp7_750 = st.number_input("Aantal CP7 750", min_value=0, value=init_cp7_750, step=1, key=f"cp7_750_{st.session_state.reset_id}", label_visibility="collapsed")
     pallets_cp7_750_totaal = int(in_cp7_750) if in_cp7_750 is not None else 0
 
+ibc_cp1_type = "IBC"
 with col4:
-    st.markdown('<div class="custom-box" style="background-color:#f1c40f; color:black;">IBC (1000x1200)</div>', unsafe_allow_html=True)
-    in_ibc = st.number_input("Aantal IBC", min_value=0, value=init_ibc, step=1, key=f"ibc_{st.session_state.reset_id}", label_visibility="collapsed")
+    st.markdown('<div class="custom-box" style="background-color:#f1c40f; color:black;">IBC / CP1 (1000x1200)</div>', unsafe_allow_html=True)
+    in_ibc = st.number_input("Aantal IBC / CP1", min_value=0, value=init_ibc_cp1, step=1, key=f"ibc_{st.session_state.reset_id}", label_visibility="collapsed")
     pallets_ibc = int(in_ibc) if in_ibc is not None else 0
-    if pallets_ibc > 0 and "IBC" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("IBC")
+    if pallets_ibc > 0:
+        default_cp1 = 1 if (pdf_d and pdf_d.get("cp1", 0) > pdf_d.get("ibc", 0)) else 0
+        ibc_keuze = st.selectbox("Type IBC / CP1:", (1000, 500), index=default_cp1, format_func=lambda x: "1000 kg (IBC)" if x == 1000 else "500 kg (CP1)", key=f"ibc_type_{st.session_state.reset_id}", label_visibility="collapsed")
+        ibc_cp1_type = "CP1" if ibc_keuze == 500 else "IBC"
 
 with col5:
     st.markdown('<div class="custom-box" style="background-color:#7f8c8d;">Maatwerk 📐</div>', unsafe_allow_html=True)
     in_mw = st.number_input("Aantal Maatwerk", min_value=0, value=0, step=1, key=f"mw_{st.session_state.reset_id}", label_visibility="collapsed")
     pallets_mw = int(in_mw) if in_mw is not None else 0
     if pallets_mw > 0:
-        if "Maatwerk" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("Maatwerk")
         mw_L = st.number_input("L (mm):", min_value=1, value=1000, step=10, key=f"mw_l_{st.session_state.reset_id}") or 1000
         mw_B = st.number_input("B (mm):", min_value=1, value=1000, step=10, key=f"mw_b_{st.session_state.reset_id}") or 1000
         mw_kg = st.number_input("Gewicht (kg):", min_value=1, value=500, step=50, key=f"mw_kg_{st.session_state.reset_id}") or 500
@@ -401,105 +376,108 @@ with col5:
         product_info["Maatwerk"]["breedte"] = mw_B
         product_info["Maatwerk"]["gewicht"] = mw_kg
 
-js_select = (
-    "<sc" + "ript>"
-    "const doc = window.parent.document;"
-    "function selecteerBijKlik(e) {"
-    "  if (e.target && e.target.tagName === 'INPUT' && (e.target.type === 'number' || e.target.inputMode === 'numeric')) {"
-    "    setTimeout(() => { e.target.select(); }, 20);"
-    "  }"
-    "}"
-    "doc.removeEventListener('focusin', selecteerBijKlik);"
-    "doc.addEventListener('focusin', selecteerBijKlik);"
-    "doc.removeEventListener('click', selecteerBijKlik);"
-    "doc.addEventListener('click', selecteerBijKlik);"
-    "</sc" + "ript>"
+        gelezen_pal = d["cp3_500"] + d["cp3_1000"] + d["cp7_600"] + d["cp7_750"] + d["ibc"] + d.get("cp1", 0)
+        gelezen_bags = d.get("bags", 0)
+        if d["regels"]:
+            label_tot = f"{gelezen_pal} PAL" + (f" + {gelezen_bags} BAGS" if gelezen_bags > 0 else "")
+            st.success(f"✅ **Bon ingelezen ({label_tot}):** {' | '.join(d['regels'])} — **Totaal gewicht:** {d['totaal_gewicht']} kg")
+            if d.get("bon_totaal_pal", 0) > 0 and gelezen_pal != d["bon_totaal_pal"]:
+                st.warning(f"⚠️ Let op: op de bon staat onderaan **{d['bon_totaal_pal']} PAL**, maar er zijn **{gelezen_pal} PAL** herkend. Controleer even de ontbrekende regel.")
+        else:
+            st.warning("⚠️ Bestand gelezen, maar geen regels herkend. Maak een rechtere/scherpere foto of gebruik de SAP-PDF.")
+        with st.expander("🔍 Bekijk uitgelezen tekst van de bon"):
+            st.text(d.get("ruwe_tekst", ""))
+
+st.write("### 1. Kies container / oplegger:")
+container_type = st.selectbox(
+    "1. Kies container:", 
+    ("45ft Container / Bache (13550 x 2426 mm)", "40ft Container (12030 x 2350 mm)", "20ft Container (5898 x 2350 mm)"),
+    label_visibility="collapsed"
 )
-components.html(js_select, height=0, width=0)
 
-handmatig_modus = False
-if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0:
-    handmatig_modus = st.checkbox("🛠️ Handmatig aanpassen (zelf volgorde & voor/achter bepalen)", value=False)
-auto_aslast = not handmatig_modus
+max_lengte = 13550 if "45ft" in container_type else 12030 if "40ft" in container_type else 5898
+max_breedte = 2426 if "45ft" in container_type else 2350
+marge_achter = 100
+effectieve_lengte = max_lengte - marge_achter
 
-as_v_cp3, as_a_cp3 = 0, 0
-as_v_cp7_600, as_a_cp7_600 = 0, 0
-as_v_cp7_750, as_a_cp7_750 = 0, 0
-as_v_ibc, as_a_ibc = 0, 0
-as_v_mw, as_a_mw = 0, 0
+product_info = {
+    "CP3": {"lengte": 1150, "breedte": 1150, "kleur": "#3498db", "stapelbaar": False, "label": "CP3", "gewicht": 500},
+    "CP7_600": {"lengte": 1400, "breedte": 1100, "kleur": "#2ecc71", "stapelbaar": True, "label": "CP7 600", "gewicht": 600},
+    "CP7_750": {"lengte": 1400, "breedte": 1150, "kleur": "#e74c3c", "stapelbaar": True, "label": "CP7 750", "gewicht": 750},
+    "IBC": {"lengte": 1000, "breedte": 1200, "kleur": "#f1c40f", "stapelbaar": False, "label": "IBC", "gewicht": 1000},
+    "CP1": {"lengte": 1000, "breedte": 1200, "kleur": "#e67e22", "stapelbaar": False, "label": "CP1", "gewicht": 500},
+    "BAGS": {"lengte": 1035, "breedte": 1175, "kleur": "#9b59b6", "stapelbaar": True, "label": "Bags", "gewicht": 45},
+    "Maatwerk": {"lengte": 1000, "breedte": 1000, "kleur": "#7f8c8d", "stapelbaar": False, "label": "Maatwerk", "gewicht": 500}
+}
 
-c_v_cp3, c_a_cp3 = False, False
-c_v_cp7_600, c_a_cp7_600 = True, True
-c_v_cp7_750, c_a_cp7_750 = True, True
-c_v_ibc, c_a_ibc = False, False
-c_v_mw, c_a_mw = False, False
+pdf_d = st.session_state.pdf_data
+init_cp3 = (pdf_d["cp3_500"] + pdf_d["cp3_1000"]) if pdf_d else 0
+init_cp7_600 = pdf_d["cp7_600"] if pdf_d else 0
+init_cp7_750 = pdf_d["cp7_750"] if pdf_d else 0
+init_ibc_cp1 = (pdf_d["ibc"] + pdf_d.get("cp1", 0)) if pdf_d else 0
+init_bags = pdf_d.get("bags", 0) if pdf_d else 0
+init_bags_kg = pdf_d.get("bags_kg_stuk", 45) if pdf_d else 45
 
-richting_v_cp7_600 = "Lang (1400x1100)"
-richting_a_cp7_600 = "Lang (1400x1100)"
-richting_v_cp7_750 = "Lang (1400x1150)"
-richting_a_cp7_750 = "Lang (1400x1150)"
+col_titel, col_wis = st.columns(2)
+with col_titel: st.write("### 2. Vul aantal pallets / zakken in:")
+with col_wis:
+    if st.button("🗑️ Wis alles", type="primary", use_container_width=True, key="wis_alles_hoofd"):
+        st.session_state.klik_volgorde = []
+        st.session_state.pdf_data = None
+        st.session_state.laatste_pdf_naam = ""
+        st.session_state.reset_id += 1
+        st.rerun()
+    uitvloeren_keuze = st.radio(
+        "Uitvloeren? (vloerlengte benutten):",
+        ("Ja (zonder afstapelen)", "Ja (met afstapelen)", "Nee (compact)"),
+        horizontal=True,
+        key=f"uitvloeren_{st.session_state.reset_id}"
+    )
+    uitvloeren = uitvloeren_keuze.startswith("Ja")
+    mag_afstapelen = (uitvloeren_keuze == "Ja (met afstapelen)")
 
-if handmatig_modus and (pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0):
-    with st.expander("⚖️ Handmatige plaatsing vooraan (VOR) / achteraan (ACH) per artikel", expanded=True):
-        v_col1, v_col2, v_col3, v_col4, v_col5 = st.columns(5)
-        with v_col1:
-            if pallets_cp3 > 0:
-                as_v_cp3 = st.number_input("CP3 VOR", min_value=0, max_value=pallets_cp3, value=0, step=1, key=f"v_cp3_{st.session_state.reset_id}") or 0
-                if as_v_cp3 > 0:
-                    c_v_cp3 = (st.radio("CP3 VOR plaatsing:", ("Naast elkaar", "Centraal"), key=f"cv_cp3_{st.session_state.reset_id}") == "Centraal")
-                as_a_cp3 = st.number_input("CP3 ACH", min_value=0, max_value=pallets_cp3 - as_v_cp3, value=0, step=1, key=f"a_cp3_{st.session_state.reset_id}") or 0
-                if as_a_cp3 > 0:
-                    c_a_cp3 = (st.radio("CP3 ACH plaatsing:", ("Naast elkaar", "Centraal"), key=f"ca_cp3_{st.session_state.reset_id}") == "Centraal")
-        with v_col2:
-            if pallets_cp7_600_totaal > 0:
-                as_v_cp7_600 = st.number_input("CP7 600 VOR", min_value=0, max_value=pallets_cp7_600_totaal, value=0, step=1, key=f"v_cp7_600_{st.session_state.reset_id}") or 0
-                if as_v_cp7_600 > 0:
-                    richting_v_cp7_600 = st.radio("Richting VOR (600):", ("Lang (1400x1100)", "Smal (1100x1400)"), key=f"r_v_cp7_600_{st.session_state.reset_id}")
-                    c_v_cp7_600 = (st.radio("CP7 600 VOR plaatsing:", ("Centraal", "Naast elkaar"), key=f"cv_600_{st.session_state.reset_id}") == "Centraal")
-                as_a_cp7_600 = st.number_input("CP7 600 ACH", min_value=0, max_value=pallets_cp7_600_totaal - as_v_cp7_600, value=0, step=1, key=f"a_cp7_600_{st.session_state.reset_id}") or 0
-                if as_a_cp7_600 > 0:
-                    richting_a_cp7_600 = st.radio("Richting ACH (600):", ("Lang (1400x1100)", "Smal (1100x1400)"), key=f"r_a_cp7_600_{st.session_state.reset_id}")
-                    c_a_cp7_600 = (st.radio("CP7 600 ACH plaatsing:", ("Centraal", "Naast elkaar"), key=f"ca_600_{st.session_state.reset_id}") == "Centraal")
-        with v_col3:
-            if pallets_cp7_750_totaal > 0:
-                as_v_cp7_750 = st.number_input("CP7 750 VOR", min_value=0, max_value=pallets_cp7_750_totaal, value=0, step=1, key=f"v_cp7_750_{st.session_state.reset_id}") or 0
-                if as_v_cp7_750 > 0:
-                    richting_v_cp7_750 = st.radio("Richting VOR (750):", ("Lang (1400x1150)", "Smal (1150x1400)"), key=f"r_v_cp7_750_{st.session_state.reset_id}")
-                    c_v_cp7_750 = (st.radio("CP7 750 VOR plaatsing:", ("Centraal", "Naast elkaar"), key=f"cv_750_{st.session_state.reset_id}") == "Centraal")
-                as_a_cp7_750 = st.number_input("CP7 750 ACH", min_value=0, max_value=pallets_cp7_750_totaal - as_v_cp7_750, value=0, step=1, key=f"a_cp7_750_{st.session_state.reset_id}") or 0
-                if as_a_cp7_750 > 0:
-                    richting_a_cp7_750 = st.radio("Richting ACH (750):", ("Lang (1400x1150)", "Smal (1150x1400)"), key=f"r_a_cp7_750_{st.session_state.reset_id}")
-                    c_a_cp7_750 = (st.radio("CP7 750 ACH plaatsing:", ("Centraal", "Naast elkaar"), key=f"ca_750_{st.session_state.reset_id}") == "Centraal")
-        with v_col4:
-            if pallets_ibc > 0:
-                as_v_ibc = st.number_input("IBC VOR", min_value=0, max_value=pallets_ibc, value=0, step=1, key=f"v_ibc_{st.session_state.reset_id}") or 0
-                if as_v_ibc > 0:
-                    c_v_ibc = (st.radio("IBC VOR plaatsing:", ("Naast elkaar", "Centraal"), key=f"cv_ibc_{st.session_state.reset_id}") == "Centraal")
-                as_a_ibc = st.number_input("IBC ACH", min_value=0, max_value=pallets_ibc - as_v_ibc, value=0, step=1, key=f"a_ibc_{st.session_state.reset_id}") or 0
-                if as_a_ibc > 0:
-                    c_a_ibc = (st.radio("IBC ACH plaatsing:", ("Naast elkaar", "Centraal"), key=f"ca_ibc_{st.session_state.reset_id}") == "Centraal")
-        with v_col5:
-            if pallets_mw > 0:
-                as_v_mw = st.number_input("MW VOR", min_value=0, max_value=pallets_mw, value=0, step=1, key=f"v_mw_{st.session_state.reset_id}") or 0
-                if as_v_mw > 0:
-                    c_v_mw = (st.radio("MW VOR plaatsing:", ("Naast elkaar", "Centraal"), key=f"cv_mw_{st.session_state.reset_id}") == "Centraal")
-                as_a_mw = st.number_input("MW ACH", min_value=0, max_value=pallets_mw - as_v_mw, value=0, step=1, key=f"a_mw_{st.session_state.reset_id}") or 0
-                if as_a_mw > 0:
-                    c_a_mw = (st.radio("MW ACH plaatsing:", ("Naast elkaar", "Centraal"), key=f"ca_mw_{st.session_state.reset_id}") == "Centraal")
-hoofd_cp7_600 = max(0, pallets_cp7_600_totaal - as_v_cp7_600 - as_a_cp7_600)
-if pallets_cp7_600_totaal > 0 and "CP7_600" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP7_600")
+col1, col2, col3, col4, col5 = st.columns(5)
 
-hoofd_cp7_750 = max(0, pallets_cp7_750_totaal - as_v_cp7_750 - as_a_cp7_750)
-if pallets_cp7_750_totaal > 0 and "CP7_750" not in st.session_state.klik_volgorde: st.session_state.klik_volgorde.append("CP7_750")
+with col1:
+    st.markdown('<div class="custom-box" style="background-color:#3498db;">CP3 (1150x1150)</div>', unsafe_allow_html=True)
+    in_cp3 = st.number_input("Aantal CP3", min_value=0, value=init_cp3, step=1, key=f"cp3_{st.session_state.reset_id}", label_visibility="collapsed")
+    pallets_cp3 = int(in_cp3) if in_cp3 is not None else 0
+    if pallets_cp3 > 0:
+        default_cp3_kg = 1000 if (pdf_d and pdf_d["cp3_1000"] > pdf_d["cp3_500"]) else 500
+        cp3_kg_stuk = st.selectbox("Gewicht CP3:", (500, 1000), index=0 if default_cp3_kg == 500 else 1, format_func=lambda x: f"{x} kg/pal", key=f"cp3_kg_{st.session_state.reset_id}", label_visibility="collapsed")
+        product_info["CP3"]["gewicht"] = cp3_kg_stuk
 
 with col2:
-    if pallets_cp7_600_totaal > 0 and not auto_aslast: st.write(f"➡️ **Gewone CP7 600 over:** {hoofd_cp7_600}")
-with col3:
-    if pallets_cp7_750_totaal > 0 and not auto_aslast: st.write(f"➡️ **Gewone CP7 750 over:** {hoofd_cp7_750}")
+    st.markdown('<div class="custom-box" style="background-color:#2ecc71;">CP7 600kg (1400x1100)</div>', unsafe_allow_html=True)
+    in_cp7_600 = st.number_input("Aantal CP7 600", min_value=0, value=init_cp7_600, step=1, key=f"cp7_600_{st.session_state.reset_id}", label_visibility="collapsed")
+    pallets_cp7_600_totaal = int(in_cp7_600) if in_cp7_600 is not None else 0
 
-hoofd_cp3 = max(0, pallets_cp3 - as_v_cp3 - as_a_cp3)
-hoofd_ibc = max(0, pallets_ibc - as_v_ibc - as_a_ibc)
-hoofd_mw = max(0, pallets_mw - as_v_mw - as_a_mw)
+with col3:
+    st.markdown('<div class="custom-box" style="background-color:#e74c3c;">CP7 750kg (1400x1150)</div>', unsafe_allow_html=True)
+    in_cp7_750 = st.number_input("Aantal CP7 750", min_value=0, value=init_cp7_750, step=1, key=f"cp7_750_{st.session_state.reset_id}", label_visibility="collapsed")
+    pallets_cp7_750_totaal = int(in_cp7_750) if in_cp7_750 is not None else 0
+
+ibc_cp1_type = "IBC"
+with col4:
+    st.markdown('<div class="custom-box" style="background-color:#f1c40f; color:black;">IBC / CP1 (1000x1200)</div>', unsafe_allow_html=True)
+    in_ibc = st.number_input("Aantal IBC / CP1", min_value=0, value=init_ibc_cp1, step=1, key=f"ibc_{st.session_state.reset_id}", label_visibility="collapsed")
+    pallets_ibc = int(in_ibc) if in_ibc is not None else 0
+    if pallets_ibc > 0:
+        default_cp1 = 1 if (pdf_d and pdf_d.get("cp1", 0) > pdf_d.get("ibc", 0)) else 0
+        ibc_keuze = st.selectbox("Type IBC / CP1:", (1000, 500), index=default_cp1, format_func=lambda x: "1000 kg (IBC)" if x == 1000 else "500 kg (CP1)", key=f"ibc_type_{st.session_state.reset_id}", label_visibility="collapsed")
+        ibc_cp1_type = "CP1" if ibc_keuze == 500 else "IBC"
+
+with col5:
+    st.markdown('<div class="custom-box" style="background-color:#7f8c8d;">Maatwerk 📐</div>', unsafe_allow_html=True)
+    in_mw = st.number_input("Aantal Maatwerk", min_value=0, value=0, step=1, key=f"mw_{st.session_state.reset_id}", label_visibility="collapsed")
+    pallets_mw = int(in_mw) if in_mw is not None else 0
+    if pallets_mw > 0:
+        mw_L = st.number_input("L (mm):", min_value=1, value=1000, step=10, key=f"mw_l_{st.session_state.reset_id}") or 1000
+        mw_B = st.number_input("B (mm):", min_value=1, value=1000, step=10, key=f"mw_b_{st.session_state.reset_id}") or 1000
+        mw_kg = st.number_input("Gewicht (kg):", min_value=1, value=500, step=50, key=f"mw_kg_{st.session_state.reset_id}") or 500
+        product_info["Maatwerk"]["lengte"] = mw_L
+        product_info["Maatwerk"]["breedte"] = mw_B
+        product_info["Maatwerk"]["gewicht"] = mw_kg
 
 laad_lijst = []
 
@@ -510,7 +488,7 @@ def haal_pallet_kleur(art_naam, overgebleven, standaard_kleur):
         return "#c0392b" if overgebleven >= 2 else "#ff7675"
     return standaard_kleur
 
-def voeg_partij_toe_aslast(art_naam, aantal, richting, override_kg=None, centraal=True):
+def voeg_partij_toe_aslast(art_naam, aantal, richting, override_kg=None, centraal=True, geschrankt=False):
     if aantal > 0:
         info = product_info[art_naam].copy()
         stuk_kg = override_kg if override_kg is not None else info["gewicht"]
@@ -528,7 +506,7 @@ def voeg_partij_toe_aslast(art_naam, aantal, richting, override_kg=None, centraa
             laad_lijst.append({
                 "naam": f"{info['label']}{h_label}", "naam_puur": art_naam,
                 "L": info["lengte"], "B": info["breedte"], "kleur": gekozen_kleur,
-                "force_midden": centraal, "kg": stapel_kg
+                "force_midden": centraal, "geschrankt": geschrankt, "kg": stapel_kg
             })
 
 def voeg_partij_toe(art_naam, aantal, dwars=False, override_kg=None):
@@ -548,82 +526,101 @@ def voeg_partij_toe(art_naam, aantal, dwars=False, override_kg=None):
             laad_lijst.append({
                 "naam": f"{info['label']}{h_label}", "naam_puur": art_naam,
                 "L": info["lengte"], "B": info["breedte"], "kleur": gekozen_kleur,
-                "force_midden": False, "kg": stapel_kg
+                "force_midden": False, "geschrankt": False, "kg": stapel_kg
             })
 
 if handmatig_modus:
     voor_items = (
-        ("CP7_600", as_v_cp7_600, richting_v_cp7_600, c_v_cp7_600),
-        ("CP7_750", as_v_cp7_750, richting_v_cp7_750, c_v_cp7_750),
-        ("CP3", as_v_cp3, "Lang", c_v_cp3),
-        ("IBC", as_v_ibc, "Lang", c_v_ibc),
-        ("Maatwerk", as_v_mw, "Lang", c_v_mw),
+        ("CP7_600", as_v_cp7_600, richting_v_cp7_600, c_v_cp7_600, False),
+        ("CP7_750", as_v_cp7_750, richting_v_cp7_750, c_v_cp7_750, False),
+        ("CP3", as_v_cp3, "Lang", c_v_cp3, False),
+        (ibc_cp1_type, as_v_ibc, "Lang", c_v_ibc, g_v_ibc),
+        ("Maatwerk", as_v_mw, "Lang", c_v_mw, False),
     )
-    for art, aantal, richt, is_centr in voor_items:
+    for art, aantal, richt, is_centr, is_geschr in voor_items:
         if aantal > 0 and is_centr:
-            voeg_partij_toe_aslast(art, aantal, richt, centraal=True)
-    for art, aantal, richt, is_centr in voor_items:
+            voeg_partij_toe_aslast(art, aantal, richt, centraal=True, geschrankt=False)
+    for art, aantal, richt, is_centr, is_geschr in voor_items:
         if aantal > 0 and not is_centr:
-            voeg_partij_toe_aslast(art, aantal, richt, centraal=False)
+            voeg_partij_toe_aslast(art, aantal, richt, centraal=False, geschrankt=is_geschr)
+
 rest_600 = hoofd_cp7_600
 rest_750 = hoofd_cp7_750
 
-if not handmatig_modus and rest_750 >= 36 and rest_600 == 0 and hoofd_cp3 == 0 and hoofd_ibc == 0 and max_lengte == 13550:
+if not handmatig_modus and rest_750 >= 36 and rest_600 == 0 and hoofd_cp3 == 0 and hoofd_ibc == 0 and aantal_bags == 0 and max_lengte == 13550:
     voeg_partij_toe_aslast("CP7_750", 4, "Smal (1150x1400)", centraal=True)
     rest_750 -= 4
     voeg_partij_toe("CP7_750", rest_750)
-elif not handmatig_modus and rest_600 >= 36 and rest_750 == 0 and hoofd_cp3 == 0 and hoofd_ibc == 0 and max_lengte == 13550:
+elif not handmatig_modus and rest_600 >= 36 and rest_750 == 0 and hoofd_cp3 == 0 and hoofd_ibc == 0 and aantal_bags == 0 and max_lengte == 13550:
     voeg_partij_toe_aslast("CP7_600", 4, "Smal (1100x1400)", centraal=True)
     rest_600 -= 4
     voeg_partij_toe("CP7_600", rest_600)
 else:
     def bouw_auto_lijst(d_750, e_750, d_600, e_600, mix_600_op_750=0, dwars_600=0, dwars_750=0, dwars_1h_600=0):
         lijst = []
-        # Nooit 2H en 1H tegelijk dwars mixen
         if dwars_600 > 0 or dwars_750 > 0:
             dwars_1h_600 = 0
 
+        # 0. CP1 altijd vooraan tegen het kopschot (rugwand)
+        if ibc_cp1_type == "CP1":
+            cp1_i = product_info["CP1"]
+            for _ in range(hoofd_ibc):
+                lijst.append({"naam": "CP1", "naam_puur": "CP1", "L": 1000, "B": 1200, "kleur": cp1_i["kleur"], "force_midden": False, "geschrankt": (max_breedte == 2350), "kg": cp1_i["gewicht"]})
+
+        # 0b. Losse Bags strak tegen CP1 (2 naast elkaar, 2 hoog; bij rest 3: 2 onder + 1 dwars erboven)
+        if aantal_bags > 0:
+            b_kg = product_info["BAGS"]["gewicht"]
+            volle_rijen = aantal_bags // 4
+            rest_bags = aantal_bags % 4
+            for _ in range(volle_rijen * 2):
+                lijst.append({"naam": "Bags (2H)", "naam_puur": "BAGS", "L": 1035, "B": 1175, "kleur": "#9b59b6", "force_midden": False, "geschrankt": False, "kg": b_kg * 2})
+            if rest_bags == 3:
+                lijst.append({"naam": "Bags (1+1 dwars)", "naam_puur": "BAGS", "L": 1035, "B": 1175, "kleur": "#8e44ad", "force_midden": False, "geschrankt": False, "kg": b_kg * 2})
+                lijst.append({"naam": "Bag (1H)", "naam_puur": "BAGS", "L": 1035, "B": 1175, "kleur": "#af7ac5", "force_midden": False, "geschrankt": False, "kg": b_kg})
+            elif rest_bags == 2:
+                for _ in range(2):
+                    lijst.append({"naam": "Bag (1H)", "naam_puur": "BAGS", "L": 1035, "B": 1175, "kleur": "#af7ac5", "force_midden": False, "geschrankt": False, "kg": b_kg})
+            elif rest_bags == 1:
+                lijst.append({"naam": "Bag (1H)", "naam_puur": "BAGS", "L": 1035, "B": 1175, "kleur": "#af7ac5", "force_midden": False, "geschrankt": False, "kg": b_kg})
+
         for _ in range(dwars_600):
-            lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1100, "B": 1400, "kleur": "#1b5e20", "force_midden": True, "kg": 1200})
+            lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1100, "B": 1400, "kleur": "#1b5e20", "force_midden": True, "geschrankt": False, "kg": 1200})
         for _ in range(dwars_750):
-            lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1150, "B": 1400, "kleur": "#c0392b", "force_midden": True, "kg": 1500})
+            lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1150, "B": 1400, "kleur": "#c0392b", "force_midden": True, "geschrankt": False, "kg": 1500})
         for _ in range(dwars_1h_600):
-            lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1100, "B": 1400, "kleur": "#2ecc71", "force_midden": True, "kg": 600})
+            lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1100, "B": 1400, "kleur": "#2ecc71", "force_midden": True, "geschrankt": False, "kg": 600})
 
         heeft_pdf_cp3 = pdf_d and (pdf_d["cp3_500"] + pdf_d["cp3_1000"] == pallets_cp3) and (hoofd_cp3 == pallets_cp3)
         cp3_licht = pdf_d["cp3_500"] if heeft_pdf_cp3 else (hoofd_cp3 if product_info["CP3"]["gewicht"] == 500 else 0)
         cp3_zwaar = pdf_d["cp3_1000"] if heeft_pdf_cp3 else (hoofd_cp3 if product_info["CP3"]["gewicht"] == 1000 else 0)
 
-        # 1. Hoogste eerst: CP7 (2H) & mix
         for _ in range(d_600):
-            lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": False, "kg": 1200})
+            lijst.append({"naam": "CP7 600 (2H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#1b5e20", "force_midden": False, "geschrankt": False, "kg": 1200})
         for _ in range(mix_600_op_750):
-            lijst.append({"naam": "CP7 600 op 750", "naam_puur": "CP7_MIX", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "kg": 1350})
+            lijst.append({"naam": "CP7 600 op 750", "naam_puur": "CP7_MIX", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "geschrankt": False, "kg": 1350})
         for _ in range(d_750):
-            lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "kg": 1500})
+            lijst.append({"naam": "CP7 750 (2H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#c0392b", "force_midden": False, "geschrankt": False, "kg": 1500})
 
-        # 2. CP3 1000kg (mag zowel naast oneven CP7 2H als naast IBC aansluiten; bij compact ook naast laatste CP7 1H)
         dubbel_rij = d_600 + mix_600_op_750 + d_750
+        heeft_achter_ibc = (ibc_cp1_type == "IBC" and hoofd_ibc > 0)
         for i_z in range(cp3_zwaar):
-            is_laatste_oneven = uitvloeren and (i_z == cp3_zwaar - 1) and ((dubbel_rij + cp3_zwaar) % 2 == 1) and (e_600 + e_750 > 0) and (hoofd_ibc == 0)
-            lijst.append({"naam": "CP3", "naam_puur": "CP3", "L": 1150, "B": 1150, "kleur": "#3498db", "force_midden": is_laatste_oneven, "kg": 1000})
+            is_laatste_oneven = uitvloeren and (i_z == cp3_zwaar - 1) and ((dubbel_rij + cp3_zwaar) % 2 == 1) and (e_600 + e_750 > 0) and not heeft_achter_ibc
+            lijst.append({"naam": "CP3", "naam_puur": "CP3", "L": 1150, "B": 1150, "kleur": "#3498db", "force_midden": is_laatste_oneven, "geschrankt": False, "kg": 1000})
 
-        # 3. CP7 (1H) — altijd strak bij elkaar, nooit door elkaar met CP3
         for _ in range(e_600):
-            lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#2ecc71", "force_midden": False, "kg": 600})
+            lijst.append({"naam": "CP7 600 (1H)", "naam_puur": "CP7_600", "L": 1400, "B": 1100, "kleur": "#2ecc71", "force_midden": False, "geschrankt": False, "kg": 600})
         for _ in range(e_750):
-            lijst.append({"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#ff7675", "force_midden": False, "kg": 750})
+            lijst.append({"naam": "CP7 750 (1H)", "naam_puur": "CP7_750", "L": 1400, "B": 1150, "kleur": "#ff7675", "force_midden": False, "geschrankt": False, "kg": 750})
 
-        # 4. Laagste pallets vóór IBC: CP3 500kg & Maatwerk
         for _ in range(cp3_licht):
-            lijst.append({"naam": "CP3", "naam_puur": "CP3", "L": 1150, "B": 1150, "kleur": "#3498db", "force_midden": False, "kg": 500})
+            lijst.append({"naam": "CP3", "naam_puur": "CP3", "L": 1150, "B": 1150, "kleur": "#3498db", "force_midden": False, "geschrankt": False, "kg": 500})
         for _ in range(hoofd_mw):
             mw_i = product_info["Maatwerk"]
-            lijst.append({"naam": "Maatwerk", "naam_puur": "Maatwerk", "L": mw_i["lengte"], "B": mw_i["breedte"], "kleur": "#7f8c8d", "force_midden": False, "kg": mw_i["gewicht"]})
+            lijst.append({"naam": "Maatwerk", "naam_puur": "Maatwerk", "L": mw_i["lengte"], "B": mw_i["breedte"], "kleur": "#7f8c8d", "force_midden": False, "geschrankt": False, "kg": mw_i["gewicht"]})
 
-        # 5. IBC's altijd helemaal achteraan (tweede laadkaai)
-        for _ in range(hoofd_ibc):
-            lijst.append({"naam": "IBC", "naam_puur": "IBC", "L": 1000, "B": 1200, "kleur": "#f1c40f", "force_midden": False, "kg": 1000})
+        if ibc_cp1_type == "IBC":
+            for _ in range(hoofd_ibc):
+                lijst.append({"naam": "IBC", "naam_puur": "IBC", "L": 1000, "B": 1200, "kleur": "#f1c40f", "force_midden": False, "geschrankt": (max_breedte == 2350), "kg": 1000})
 
         return lijst
 
