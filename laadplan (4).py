@@ -483,7 +483,7 @@ hoofd_cp7_750 = max(0, pallets_cp7_750_totaal - as_v_cp7_750 - as_a_cp7_750)
 hoofd_cp3 = max(0, pallets_cp3 - as_v_cp3 - as_a_cp3)
 hoofd_ibc = max(0, pallets_ibc - as_v_ibc - as_a_ibc)
 hoofd_mw = max(0, pallets_mw - as_v_mw - as_a_mw)
-
+laad_lijst = []
 
 def voeg_partij_toe_aslast(art_naam, aantal, richting, override_kg=None, centraal=True, geschrankt=False):
     if aantal > 0:
