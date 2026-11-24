@@ -385,16 +385,6 @@ with b_col1:
         in_bags_kg = st.number_input("Gewicht per bag (kg):", min_value=1, value=init_bags_kg, step=5, key=f"bags_kg_{st.session_state.reset_id}")
         product_info["BAGS"]["gewicht"] = int(in_bags_kg) if in_bags_kg else 45
 
-with b_col1:
-    st.markdown('<div class="custom-box" style="background-color:#9b59b6;">Losse Bags (zonder pallet — 2x2 per rij)</div>', unsafe_allow_html=True)
-    in_bags = st.number_input("Aantal Losse Bags", min_value=0, value=init_bags, step=1, key=f"bags_{st.session_state.reset_id}", label_visibility="collapsed")
-    aantal_bags = int(in_bags) if in_bags is not None else 0
-with b_col2:
-    if aantal_bags > 0:
-        st.markdown('<div class="custom-box" style="background-color:#8e44ad;">Gewicht per bag (kg)</div>', unsafe_allow_html=True)
-        in_bags_kg = st.number_input("Gewicht per bag", min_value=1, value=init_bags_kg, step=5, key=f"bags_kg_{st.session_state.reset_id}", label_visibility="collapsed")
-        product_info["BAGS"]["gewicht"] = int(in_bags_kg) if in_bags_kg else 45
-
 js_select = (
     "<sc" + "ript>"
     "const doc = window.parent.document;"
