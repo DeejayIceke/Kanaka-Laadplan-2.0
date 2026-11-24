@@ -6,7 +6,8 @@ import re
 import base64
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageFilter
+
 
 try:
     from pillow_heif import register_heif_opener
@@ -302,7 +303,8 @@ def beste_ocr_tekst_van_beeld(afbeelding):
     beste_tekst, beste_score = "", (-1, -1)
     for hoek in (0, 90, 180, 270):
         gedraaid = afbeelding.rotate(hoek, expand=True) if hoek != 0 else afbeelding
-        grijs = ImageOps.autocontrast(gedraaid.convert("L"))
+     rood_kanaal = gedraaid.split()
+     grijs = ImageOps.autocontrast(rood_kanaal.filter(ImageFilter.SHARPEN), cutoff=2)
         tekst = pytesseract.image_to_string(grijs, config="--psm 6")
         r = verwerk_laadbon_tekst(tekst, is_foto=True)
         tot_pal = r["cp3_500"] + r["cp3_1000"] + r["cp7_600"] + r["cp7_750"] + r["ibc"]
