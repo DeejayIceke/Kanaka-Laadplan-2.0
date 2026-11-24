@@ -177,9 +177,61 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
                     witte_res["regels"].append(f"{aantal_pal}x CP3 500kg")
                 witte_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 500
 
-    res.update(witte_res)
-    return res
+    witte_totaal = witte_res["cp3_500"] + witte_res["cp3_1000"] + witte_res["cp7_600"] + witte_res["cp7_750"] + witte_res["ibc"] + witte_res["cp1"]
+    if not is_foto or (witte_totaal > 0 and res["bon_totaal_pal"] > 0 and witte_totaal == res["bon_totaal_pal"]):
+        res.update(witte_res)
+        return res
 
+    # Fallback voor foto's: lees de vetgedrukte grijze kopbalken (bv. '8 PAL / 6.000 KG')
+    kop_res = {
+        "cp3_500": 0, "cp3_1000": 0, "cp7_600": 0, "cp7_750": 0, "ibc": 0, "cp1": 0,
+        "bags": witte_res["bags"], "bags_kg_stuk": witte_res["bags_kg_stuk"],
+        "totaal_gewicht": witte_res["bags"] * witte_res["bags_kg_stuk"] if witte_res["bags"] > 0 else 0,
+        "regels": [r for r in witte_res["regels"] if "Losse Bags" in r]
+    }
+    for idx_r, r in enumerate(regels):
+        if "ITEMS TOTAL" in r or "ITEM TOTAL" in r:
+            continue
+        kop_match = re.search(r'(\d{1,2})\s*(?:PAL|PA[L1I]|P4L)\s*/\s*([\d\.,]+)\s*(?:KG|K6)', r)
+        if not kop_match:
+            continue
+        aantal_pal = int(kop_match.group(1))
+        try:
+            gewicht_kg = int(float(kop_match.group(2).replace(".", "").replace(",", ".")))
+        except ValueError:
+            gewicht_kg = 0
+
+        context = " ".join(regels[max(0, idx_r - 1):min(len(regels), idx_r + 3)])
+        if "CNPE" in context or "IBC" in context:
+            kop_res["ibc"] += aantal_pal
+            kop_res["totaal_gewicht"] += gewicht_kg
+            kop_res["regels"].append(f"{aantal_pal}x IBC")
+        elif any(c in context for c in ("CP-1", "CP1", "1,2X1,0", "1,2X1M")) or (gewicht_kg > 0 and (gewicht_kg / max(1, aantal_pal)) <= 500 and "CP-3" not in context and "CP3" not in context and "CP-7" not in context and "CP7" not in context):
+            kop_res["cp1"] += aantal_pal
+            kop_res["totaal_gewicht"] += gewicht_kg
+            kop_res["regels"].append(f"{aantal_pal}x CP1 500kg")
+        elif any(c in context for c in ("CP-7", "CP7", "-NB", "-N8", "1,4X1,2")):
+            kg_p = (gewicht_kg / max(1, aantal_pal)) if gewicht_kg > 0 else 600
+            if kg_p > 650:
+                kop_res["cp7_750"] += aantal_pal
+                kop_res["regels"].append(f"{aantal_pal}x CP7 750kg")
+            else:
+                kop_res["cp7_600"] += aantal_pal
+                kop_res["regels"].append(f"{aantal_pal}x CP7 600kg")
+            kop_res["totaal_gewicht"] += gewicht_kg
+        else:
+            kg_p = (gewicht_kg / max(1, aantal_pal)) if gewicht_kg > 0 else 500
+            if kg_p > 750:
+                kop_res["cp3_1000"] += aantal_pal
+                kop_res["regels"].append(f"{aantal_pal}x CP3 1000kg")
+            else:
+                kop_res["cp3_500"] += aantal_pal
+                kop_res["regels"].append(f"{aantal_pal}x CP3 500kg")
+            kop_res["totaal_gewicht"] += gewicht_kg
+
+    kop_totaal = kop_res["cp3_500"] + kop_res["cp3_1000"] + kop_res["cp7_600"] + kop_res["cp7_750"] + kop_res["ibc"] + kop_res["cp1"]
+    res.update(kop_res if kop_totaal > witte_totaal else witte_res)
+    return res
 
 try:
     import pypdfium2 as pdfium
