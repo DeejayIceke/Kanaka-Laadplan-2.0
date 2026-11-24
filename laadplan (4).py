@@ -82,14 +82,24 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
 
         if pal_m and laatste_type:
             aantal_pal = int(pal_m.group(1))
-            if aantal_pal <= 0 or aantal_pal > 60:
-                continue
             gewicht_kg = 0
             if kg_m:
                 try:
                     gewicht_kg = int(float(kg_m.group(1).replace(".", "").replace(",", ".")))
                 except ValueError:
                     gewicht_kg = 0
+
+            # Controleer en corrigeer OCR-leesfouten (bv. 17 gelezen als 12) via het nettogewicht
+            if gewicht_kg > 0:
+                mogelijke_gewichten = (1000,) if laatste_type in ("IBC", "CP3_1000") else ((750, 600) if laatste_type == "CP7" else (500, 1000))
+                if not any(gewicht_kg == aantal_pal * w for w in mogelijke_gewichten):
+                    for w in mogelijke_gewichten:
+                        if gewicht_kg % w == 0 and 1 <= (gewicht_kg // w) <= 60:
+                            aantal_pal = gewicht_kg // w
+                            break
+
+            if aantal_pal <= 0 or aantal_pal > 60:
+                continue
 
             if laatste_type == "IBC":
                 witte_res["ibc"] += aantal_pal
