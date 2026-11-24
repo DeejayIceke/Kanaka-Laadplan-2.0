@@ -4,3 +4,4 @@ pypdf
 pytesseract
 pillow
 pillow-heif
+pypdfium2
