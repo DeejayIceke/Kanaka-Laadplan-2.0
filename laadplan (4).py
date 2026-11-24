@@ -180,6 +180,32 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
     kop_totaal = kop_res["cp3_500"] + kop_res["cp3_1000"] + kop_res["cp7_600"] + kop_res["cp7_750"] + kop_res["ibc"]
     res.update(kop_res if kop_totaal > witte_totaal else witte_res)
     return res
+try:
+    import pypdfium2 as pdfium
+    PDFIUM_BESCHIKBAAR = True
+except ImportError:
+    PDFIUM_BESCHIKBAAR = False
+
+def beste_ocr_tekst_van_beeld(afbeelding):
+    afbeelding = ImageOps.exif_transpose(afbeelding).convert("RGB")
+    w, h = afbeelding.size
+    if max(w, h) < 2200:
+        schaal = 2200 / max(w, h)
+        afbeelding = afbeelding.resize((int(w * schaal), int(h * schaal)), Image.Resampling.LANCZOS)
+
+    beste_tekst, beste_score = "", (-1, -1)
+    for hoek in (0, 90, 180, 270):
+        gedraaid = afbeelding.rotate(hoek, expand=True) if hoek != 0 else afbeelding
+        grijs = ImageOps.autocontrast(gedraaid.convert("L"))
+        tekst = pytesseract.image_to_string(grijs, config="--psm 6")
+        r = verwerk_laadbon_tekst(tekst, is_foto=True)
+        tot_pal = r["cp3_500"] + r["cp3_1000"] + r["cp7_600"] + r["cp7_750"] + r["ibc"]
+        trefwoorden = sum(1 for k in ("PAL", "KG", "ITEM", "DELIVERY", "TOTAL", "CP-", "CNPE") if k in tekst.upper())
+        score = (tot_pal, trefwoorden)
+        if score > beste_score:
+            beste_score, beste_tekst = score, tekst
+    return beste_tekst
+
 def lees_kaneka_bestand(bestand):
     naam = bestand.name.lower()
     ruwe_bytes = bestand.getvalue()
@@ -190,24 +216,8 @@ def lees_kaneka_bestand(bestand):
             return "GEEN_OCR"
         try:
             afbeelding = Image.open(io.BytesIO(ruwe_bytes))
-            afbeelding = ImageOps.exif_transpose(afbeelding).convert("RGB")
-            w, h = afbeelding.size
-            if h > w:
-                afbeelding = afbeelding.rotate(-90, expand=True)
-
-            grijs = ImageOps.autocontrast(afbeelding.convert("L"))
-            kandidaten = (
-                pytesseract.image_to_string(afbeelding, config="--psm 6"),
-                pytesseract.image_to_string(grijs, config="--psm 6"),
-                pytesseract.image_to_string(afbeelding.rotate(180, expand=True), config="--psm 6"),
-            )
-            beste_res, beste_pal = None, -1
-            for t in kandidaten:
-                r = verwerk_laadbon_tekst(t, is_foto=True)
-                tot = r["cp3_500"] + r["cp3_1000"] + r["cp7_600"] + r["cp7_750"] + r["ibc"]
-                if tot > beste_pal:
-                    beste_pal, beste_res = tot, r
-            return beste_res
+            ocr_tekst = beste_ocr_tekst_van_beeld(afbeelding)
+            return verwerk_laadbon_tekst(ocr_tekst, is_foto=True)
         except Exception:
             return "ONLEESBARE_FOTO"
 
@@ -218,6 +228,25 @@ def lees_kaneka_bestand(bestand):
                 volledige_tekst += "\n" + (pagina.extract_text() or "")
         except Exception:
             return "CORRUPT_PDF"
+
+    if volledige_tekst.strip():
+        res_pdf = verwerk_laadbon_tekst(volledige_tekst, is_foto=False)
+        tot_pdf = res_pdf["cp3_500"] + res_pdf["cp3_1000"] + res_pdf["cp7_600"] + res_pdf["cp7_750"] + res_pdf["ibc"]
+        if tot_pdf > 0:
+            return res_pdf
+
+    if PDFIUM_BESCHIKBAAR and OCR_BESCHIKBAAR:
+        try:
+            pdf_doc = pdfium.PdfDocument(ruwe_bytes)
+            alle_pagina_teksten = []
+            for pagina in pdf_doc:
+                bitmap = pagina.render(scale=3.0)
+                pil_img = bitmap.to_pil()
+                alle_pagina_teksten.append(beste_ocr_tekst_van_beeld(pil_img))
+            gecombineerde_tekst = "\n".join(alle_pagina_teksten)
+            return verwerk_laadbon_tekst(gecombineerde_tekst, is_foto=True)
+        except Exception:
+            pass
 
     if volledige_tekst.strip():
         return verwerk_laadbon_tekst(volledige_tekst, is_foto=False)
