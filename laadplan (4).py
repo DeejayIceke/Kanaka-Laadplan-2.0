@@ -927,7 +927,7 @@ if max_lengte == 13550:
 totale_meters = max(x_onder, x_boven)
 restruimte = max_lengte - totale_meters
 st.write("### 3. Plan & Aslast-controle:")
-if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw > 0 or as_v_cp3 + as_v_cp7_600 + as_v_cp7_750 + as_v_ibc + as_v_mw + as_a_cp3 + as_a_cp7_600 + as_a_cp7_750 + as_a_ibc + as_a_mw > 0:
+if pallets_cp3 + pallets_cp7_600_totaal + pallets_cp7_750_totaal + pallets_ibc + pallets_mw + aantal_bags > 0:
     if restruimte >= marge_achter:
         st.success(f"✅ Past! Nog {restruimte} mm over (incl. {marge_achter} mm marge) — **Totaal gewicht lading:** {totaal_lading_kg} kg")
     elif restruimte >= 0:
