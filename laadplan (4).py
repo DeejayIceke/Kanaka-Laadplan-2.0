@@ -56,7 +56,8 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
     regels = [r.upper().strip() for r in volledige_tekst.splitlines() if r.strip()]
 
     for r in regels:
-        if "ITEMS TOTAL" in r or "ITEM TOTAL" in r or "TOTAAL" in r:
+        is_totaal_regel = ("ITEMS TOTAL" in r or "ITEM TOTAL" in r or "TOTAAL" in r or (re.search(r'\b\d{1,2}\s*PAL\b', r) and re.search(r'\b\d{1,3}\s*BAG\b', r) and not re.search(r'\b\d{3}[A-Z]\d{5}[A-Z0-9]\b', r)))
+        if is_totaal_regel:
             tot_m = re.search(r'(\d+)\s*(?:PAL|PA[L1I])\b', r)
             if tot_m:
                 res["bon_totaal_pal"] = int(tot_m.group(1))
