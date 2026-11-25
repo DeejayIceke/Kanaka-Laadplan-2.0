@@ -716,7 +716,8 @@ else:
         if ibc_cp1_type == "CP1":
             cp1_i = product_info["CP1"]
             for _ in range(hoofd_ibc):
-                lijst.append({"naam": "CP1", "naam_puur": "CP1", "L": 1000, "B": 1200, "kleur": cp1_i["kleur"], "force_midden": False, "geschrankt": (max_breedte == 2350), "kg": cp1_i["gewicht"]})
+                lijst.append({"naam": "CP1", "naam_puur": "CP1", "L": 1000, "B": 1200, "kleur": cp1_i["kleur"], "force_midden": False, "geschrankt": ibc_cp1_geschrankt, "kg": cp1_i["gewicht"]})
+
 
         # 0b. Losse Bags strak tegen CP1 (2 naast elkaar, 2 hoog; bij rest 3: 2 onder + 1 dwars erboven)
         if aantal_bags > 0:
@@ -771,7 +772,8 @@ else:
 
         if ibc_cp1_type == "IBC":
             for _ in range(hoofd_ibc):
-                lijst.append({"naam": "IBC", "naam_puur": "IBC", "L": 1000, "B": 1200, "kleur": "#f1c40f", "force_midden": False, "geschrankt": (max_breedte == 2350), "kg": 1000})
+                lijst.append({"naam": "IBC", "naam_puur": "IBC", "L": 1000, "B": 1200, "kleur": "#f1c40f", "force_midden": False, "geschrankt": ibc_cp1_geschrankt, "kg": 1000})
+
 
         return lijst
 
@@ -789,23 +791,24 @@ else:
                 bo, bb, hoogte_o, hoogte_b = 0, 0, 0, 0
                 i += 1
                 continue
-            if it.get("geschrankt") and (i + 1 < len(lijst) and lijst[i + 1].get("geschrankt") and not lijst[i + 1].get("force_midden")):
-                if geschr_t % 2 == 0:
-                    x1 = max(xo, xb) if geschr_t == 0 else xo
-                    x2 = max(xo, xb) if geschr_t == 0 else xb
-                    blokken.append({"x_mid": x1 + 500, "kg": it["kg"]})
-                    blokken.append({"x_mid": x2 + 600, "kg": lijst[i + 1]["kg"]})
-                    xo, xb = x1 + 1000, x2 + 1200
-                    bo, bb = 1200, 1000
-                else:
-                    blokken.append({"x_mid": xo + 600, "kg": it["kg"]})
-                    blokken.append({"x_mid": xb + 500, "kg": lijst[i + 1]["kg"]})
-                    xo, xb = xo + 1200, xb + 1000
-                    bo, bb = 1000, 1200
-                hoogte_o, hoogte_b = 0, 0
-                geschr_t += 1
-                i += 2
-                continue
+         if it.get("geschrankt") and (i + 1 < len(lijst) and lijst[i + 1].get("geschrankt") and not lijst[i + 1].get("force_midden")):
+             if geschr_t % 2 == 0:
+                 x1 = max(xo, xb) if geschr_t == 0 else xo
+                 x2 = max(xo, xb) if geschr_t == 0 else xb
+                 blokken.append({"x_mid": x1 + 500, "kg": it["kg"]})
+                 blokken.append({"x_mid": x2 + 600, "kg": lijst[i + 1]["kg"]})
+                 xo, xb = x1 + 1000, x2 + 1200
+                 bo, bb = 1200, 1000
+             else:
+                 blokken.append({"x_mid": xo + 600, "kg": it["kg"]})
+                 blokken.append({"x_mid": xb + 500, "kg": lijst[i + 1]["kg"]})
+                 xo, xb = xo + 1200, xb + 1000
+                 bo, bb = 1000, 1200
+             hoogte_o, hoogte_b = 0, 0
+             geschr_t += 1
+             i += 2
+             continue
+
             if xo <= xb:
                 if xo < xb and (it["B"] + bb > max_breedte):
                     xo, bo, hoogte_o = xb, 0, 0
@@ -1037,6 +1040,7 @@ while idx < len(laad_lijst):
             ibc_paar_teller += 1; idx += 2; continue
 
     if x_onder <= x_boven:
+
         if x_onder < x_boven and (item["B"] + breedte_op_boven > max_breedte):
             x_onder = x_boven
             breedte_op_onder = 0
