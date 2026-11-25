@@ -55,12 +55,23 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
     }
     regels = [r.upper().strip() for r in volledige_tekst.splitlines() if r.strip()]
 
+    bon_totaal_bag = 0
+    bon_totaal_kg = 0
     for r in regels:
         is_totaal_regel = ("ITEMS TOTAL" in r or "ITEM TOTAL" in r or "TOTAAL" in r or (re.search(r'\b\d{1,2}\s*PAL\b', r) and re.search(r'\b\d{1,3}\s*BAG\b', r) and not re.search(r'\b\d{3}[A-Z]\d{5}[A-Z0-9]\b', r)))
         if is_totaal_regel:
-            tot_m = re.search(r'(\d+)\s*(?:PAL|PA[L1I])\b', r)
+            tot_m = re.search(r'(\d+)\s*(?:PAL|PA[L1I])', r)
             if tot_m:
                 res["bon_totaal_pal"] = int(tot_m.group(1))
+            tot_bag_m = re.search(r'(\d{1,3})\s*(?:BAGS?|8AGS?)', r)
+            if tot_bag_m:
+                bon_totaal_bag = int(tot_bag_m.group(1))
+            tot_kg_m = re.search(r'([\d\.,]+)\s*(?:KG|K6)', r)
+            if tot_kg_m:
+                try:
+                    bon_totaal_kg = int(float(tot_kg_m.group(1).replace(".", "").replace(",", ".")))
+                except ValueError:
+                    pass
 
     witte_res = {
         "cp3_500": 0, "cp3_1000": 0, "cp7_600": 0, "cp7_750": 0, "ibc": 0, "cp1": 0,
@@ -70,11 +81,10 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
     laatste_bag_kg = 45
 
     for r in regels:
-        if "ITEMS TOTAL" in r or "ITEM TOTAL" in r or "TOTAAL" in r:
+        if "ITEMS TOTAL" in r or "ITEM TOTAL" in r or "TOTAAL" in r or (re.search(r'\b\d{1,2}\s*PAL\b', r) and re.search(r'\b\d{1,3}\s*BAG\b', r) and not re.search(r'\b\d{3}[A-Z]\d{5}[A-Z0-9]\b', r)):
             continue
 
-        # Nieuwe sectiekop reset het vorige bloktype
-        if "STACK." in r or "PACKAGING" in r:
+        if "STACK" in r or "PACKAGING" in r:
             laatste_type = None
 
         if "CNPE" in r or "IBC" in r:
@@ -88,17 +98,18 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
         elif any(c in r for c in ("CP-1", "CP1", "1,2X1,0", "1,2X1M")):
             laatste_type = "CP1"
 
-        bag_code_m = re.search(r'\bB(\d{2,3})\b', r)
+        bag_code_m = re.search(r'-B(\d{2,3})\b', r)
         if bag_code_m:
             laatste_bag_kg = int(bag_code_m.group(1))
 
         if "STACK" in r or re.search(r'PAL\s*[/|1I]?\s*\d{1,2}\.\d{3}', r):
             continue
 
-        r_kg = re.sub(r'\b[LI](\d{3})\s*(?:KG|K6)', r'1\1 KG', r)
-        pal_m = re.search(r'(?<!\d)(\d{1,2})\s*(?:PAL|PA[L1I]|P4L)\b', r_kg)
-        bag_m = re.search(r'(?<!\d)(\d{1,3})\s*(?:BAG|8AG)\b', r_kg)
-        kg_m = re.search(r'([\d\.,]+)\s*(?:KG|K6)\b', r_kg)
+        r_kg = re.sub(r'[LI](\d{3})\s*(?:KG|K6)', r'1\1 KG', r)
+        r_kg = re.sub(r'[IIL](\d{1,2})\s*(?:PAL|PA[L1I]|P4L)', r'\1 PAL', r_kg)
+        pal_m = re.search(r'(?<!\d)(\d{1,2})\s*(?:PAL|PA[L1I]|P4L)(?![A-Z])', r_kg)
+        bag_m = re.search(r'(?<!\d)(\d{1,3})\s*(?:BAGS?|8AGS?)(?![A-Z])', r_kg)
+        kg_m = re.search(r'([\d\.,]+)\s*(?:KG|K6)(?![A-Z])', r_kg)
 
         gewicht_kg = 0
         if kg_m:
@@ -108,14 +119,14 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
                 gewicht_kg = 0
 
         # Echte losse bags (geen PAL op de regel, en niet onder een CP7/CP3/IBC-kopbalk)
-        if not pal_m and bag_m and gewicht_kg > 0 and laatste_type not in ("CP7", "CP3_500", "CP3_1000", "IBC"):
+        if not pal_m and bag_m and laatste_type not in ("CP7", "CP3_500", "CP3_1000", "IBC"):
             aantal_bags = int(bag_m.group(1))
             if 1 <= aantal_bags <= 200:
-                kg_stuk = round(gewicht_kg / aantal_bags)
-                if kg_stuk >= 15:
+                kg_stuk = round(gewicht_kg / aantal_bags) if gewicht_kg >= aantal_bags * 10 else laatste_bag_kg
+                if 15 <= kg_stuk <= 1000:
                     witte_res["bags"] += aantal_bags
                     witte_res["bags_kg_stuk"] = kg_stuk
-                    witte_res["totaal_gewicht"] += gewicht_kg
+                    witte_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_bags * kg_stuk
                     witte_res["regels"].append(f"{aantal_bags}x Losse Bags ({kg_stuk}kg)")
                     continue
 
