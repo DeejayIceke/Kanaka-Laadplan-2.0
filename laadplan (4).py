@@ -119,7 +119,7 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
                     witte_res["regels"].append(f"{aantal_bags}x Losse Bags ({kg_stuk}kg)")
                     continue
 
-        heeft_lot_of_art = bool(re.search(r'\b(?:\d{3}[A-Z]\d{4,}|CP-?[137]|CNPE|PA\d{3}|B\d{3}|FM\d{2})\b', r))
+        heeft_lot_of_art = bool(re.search(r'(?:\d{3}[A-Z]\d{4,}|-NB|-N8|-SB|-S8|CNPE|PA\d{3}|B\d{3}|FM\d{2})', r))
         if pal_m and not heeft_lot_of_art and (witte_res["cp3_500"] + witte_res["cp3_1000"] + witte_res["cp7_600"] + witte_res["cp7_750"] + witte_res["ibc"] + witte_res["cp1"] > 0):
             continue
 
