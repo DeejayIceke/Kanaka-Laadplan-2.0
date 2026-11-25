@@ -118,8 +118,10 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
                     witte_res["regels"].append(f"{aantal_bags}x Losse Bags ({kg_stuk}kg)")
                     continue
 
-     if pal_m and res["bon_totaal_pal"] > 0 and int(pal_m.group(1)) == res["bon_totaal_pal"] and not re.search(r'\b\d{3}[A-Z]\d{4,}', r):
-         continue
+        if pal_m and res["bon_totaal_pal"] > 0 and int(pal_m.group(1)) == res["bon_totaal_pal"] and not re.search(r'\b\d{3}[A-Z]\d{4,}', r):
+            continue
+
+        aantal_pal = int(pal_m.group(1)) if pal_m else 0
         if aantal_pal == 0 and gewicht_kg >= 500 and laatste_type and ("BAG" in r or "KG" in r):
             if laatste_type in ("IBC", "CP3_1000") and gewicht_kg % 1000 == 0:
                 aantal_pal = gewicht_kg // 1000
@@ -180,17 +182,18 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
                     witte_res["regels"].append(f"{aantal_pal}x CP3 500kg")
                 witte_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 500
 
- witte_totaal = witte_res["cp3_500"] + witte_res["cp3_1000"] + witte_res["cp7_600"] + witte_res["cp7_750"] + witte_res["ibc"] + witte_res["cp1"]
- if res["bon_totaal_pal"] > witte_totaal > 0:
-     verschil = res["bon_totaal_pal"] - witte_totaal
-     actieve_soorten = [k for k in ("cp3_500", "cp3_1000", "cp7_600", "cp7_750", "ibc", "cp1") if witte_res[k] > 0]
-     if len(actieve_soorten) == 1:
-         soort = actieve_soorten[0]
-         witte_res[soort] += verschil
-         gewicht_per_stuk = {"cp3_500": 500, "cp3_1000": 1000, "cp7_600": 600, "cp7_750": 750, "ibc": 1000, "cp1": 500}[soort]
-         witte_res["totaal_gewicht"] += verschil * gewicht_per_stuk
-         witte_res["regels"].append(f"{verschil}x aangevuld via bon-totaal")
-         witte_totaal = res["bon_totaal_pal"]
+    witte_totaal = witte_res["cp3_500"] + witte_res["cp3_1000"] + witte_res["cp7_600"] + witte_res["cp7_750"] + witte_res["ibc"] + witte_res["cp1"]
+    if res["bon_totaal_pal"] > witte_totaal > 0:
+        verschil = res["bon_totaal_pal"] - witte_totaal
+        actieve_soorten = [k for k in ("cp3_500", "cp3_1000", "cp7_600", "cp7_750", "ibc", "cp1") if witte_res[k] > 0]
+        if len(actieve_soorten) == 1:
+            soort = actieve_soorten[0]
+            witte_res[soort] += verschil
+            gewicht_per_stuk = {"cp3_500": 500, "cp3_1000": 1000, "cp7_600": 600, "cp7_750": 750, "ibc": 1000, "cp1": 500}[soort]
+            witte_res["totaal_gewicht"] += verschil * gewicht_per_stuk
+            witte_res["regels"].append(f"{verschil}x aangevuld via bon-totaal")
+            witte_totaal = res["bon_totaal_pal"]
+
 
     # Fallback voor foto's (ook met markeerstift): lees de grijze kopbalken (bv. '22 PAL / 22.000 KG')
     kop_res = {
