@@ -508,6 +508,7 @@ with col3:
     pallets_cp7_750_totaal = int(in_cp7_750) if in_cp7_750 is not None else 0
 
 ibc_cp1_type = "IBC"
+ibc_cp1_geschrankt = (max_breedte == 2350)
 with col4:
     st.markdown('<div class="custom-box" style="background-color:#f1c40f; color:black;">IBC / CP1 (1000x1200)</div>', unsafe_allow_html=True)
     in_ibc = st.number_input("Aantal IBC / CP1", min_value=0, value=init_ibc_cp1, step=1, key=f"ibc_{st.session_state.reset_id}", label_visibility="collapsed")
@@ -516,6 +517,8 @@ with col4:
         default_cp1 = 1 if (pdf_d and pdf_d.get("cp1", 0) > pdf_d.get("ibc", 0)) else 0
         ibc_keuze = st.selectbox("Type IBC / CP1:", (1000, 500), index=default_cp1, format_func=lambda x: "1000 kg (IBC)" if x == 1000 else "500 kg (CP1)", key=f"ibc_type_{st.session_state.reset_id}", label_visibility="collapsed")
         ibc_cp1_type = "CP1" if ibc_keuze == 500 else "IBC"
+        ibc_cp1_geschrankt = st.checkbox("Geschrankt (gedraaid)", value=(max_breedte == 2350), key=f"ibc_geschr_{st.session_state.reset_id}")
+
 
 with col5:
     st.markdown('<div class="custom-box" style="background-color:#7f8c8d;">Maatwerk 📐</div>', unsafe_allow_html=True)
