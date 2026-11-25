@@ -517,7 +517,7 @@ with col4:
         default_cp1 = 1 if (pdf_d and pdf_d.get("cp1", 0) > pdf_d.get("ibc", 0)) else 0
         ibc_keuze = st.selectbox("Type IBC / CP1:", (1000, 500), index=default_cp1, format_func=lambda x: "1000 kg (IBC)" if x == 1000 else "500 kg (CP1)", key=f"ibc_type_{st.session_state.reset_id}", label_visibility="collapsed")
         ibc_cp1_type = "CP1" if ibc_keuze == 500 else "IBC"
-ibc_cp1_geschrankt = st.checkbox("Geschrankt (gedraaid)", value=(max_breedte == 2350), key=f"ibc_geschr_{max_breedte}_{st.session_state.reset_id}")
+        ibc_cp1_geschrankt = st.checkbox("Geschrankt (gedraaid)", value=(max_breedte == 2350), key=f"ibc_geschr_{max_breedte}_{st.session_state.reset_id}")
 
 
 
