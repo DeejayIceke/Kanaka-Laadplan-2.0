@@ -124,7 +124,7 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
             continue
 
         aantal_pal = int(pal_m.group(1)) if pal_m else 0
-        if aantal_pal == 0 and gewicht_kg >= 500 and laatste_type and ("BAG" in r or "KG" in r):
+          if aantal_pal == 0 and gewicht_kg >= 500 and laatste_type and ("BAG" in r or "KG" in r) and re.search(r'(?:\d{3}[A-Z]\d{4,}|-NB|-N8|-SB|-S8|CNPE|PA\d{3}|B\d{3}|FM\d{2})', r):
             if laatste_type in ("IBC", "CP3_1000") and gewicht_kg % 1000 == 0:
                 aantal_pal = gewicht_kg // 1000
             elif laatste_type == "CP7":
