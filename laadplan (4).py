@@ -107,12 +107,12 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
             except ValueError:
                 gewicht_kg = 0
 
-        # Alleen echte losse bigbags (geen PAL op de regel, niet onder CP7/CP3/IBC-kop, en >= 35 kg per bag)
+        # Echte losse bags (geen PAL op de regel, en niet onder een CP7/CP3/IBC-kopbalk)
         if not pal_m and bag_m and gewicht_kg > 0 and laatste_type not in ("CP7", "CP3_500", "CP3_1000", "IBC"):
             aantal_bags = int(bag_m.group(1))
-            if 1 <= aantal_bags <= 120:
+            if 1 <= aantal_bags <= 200:
                 kg_stuk = round(gewicht_kg / aantal_bags)
-                if kg_stuk >= 35:
+                if kg_stuk >= 15:
                     witte_res["bags"] += aantal_bags
                     witte_res["bags_kg_stuk"] = kg_stuk
                     witte_res["totaal_gewicht"] += gewicht_kg
