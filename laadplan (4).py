@@ -1163,7 +1163,7 @@ st.divider()
 with st.expander("Laatste updates & verbeteringen", expanded=False):
     st.markdown("""
     **25-11-2026 — CP1, Geschrankt laden & Losse Bags:**
-    - **CP1 toegevoegd onder IBC / CP1:** Kies eenvoudig tussen `1000 kg (IBC)` (achteraan bij de deuren) en `500 kg (CP1)` (vooraan tegen het kopschot als stevige rugwand).
+    - **CP1 toegevoegd onder IBC / CP1:** Kies in het keuzemenu eenvoudig tussen `1000 kg (IBC)` en `500 kg (CP1)`.
     - **Keuze 'Geschrankt (gedraaid)':** In een 40ft/20ft container worden IBC en CP1 automatisch om en om geschrankt geladen; in een 45ft (en in handmatige modus) is dit nu met één vinkje aan of uit te zetten.
     - **Losse Bags (zonder pallet):** Nieuw artikel toegevoegd (2 naast elkaar x 2 hoog per rij, inclusief `2 onder + 1 dwars` bij een restant van 3) met instelbaar gewicht per zak.
 
