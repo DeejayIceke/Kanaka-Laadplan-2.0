@@ -791,7 +791,7 @@ else:
                 bo, bb, hoogte_o, hoogte_b = 0, 0, 0, 0
                 i += 1
                 continue
-         if it.get("geschrankt") and (i + 1 < len(lijst) and lijst[i + 1].get("geschrankt") and not lijst[i + 1].get("force_midden")):
+             if it.get("geschrankt") and (i + 1 < len(lijst) and lijst[i + 1].get("geschrankt") and not lijst[i + 1].get("force_midden")):
              if geschr_t % 2 == 0:
                  x1 = max(xo, xb) if geschr_t == 0 else xo
                  x2 = max(xo, xb) if geschr_t == 0 else xb
