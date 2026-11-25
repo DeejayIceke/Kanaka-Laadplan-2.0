@@ -791,25 +791,25 @@ else:
                 bo, bb, hoogte_o, hoogte_b = 0, 0, 0, 0
                 i += 1
                 continue
-             if it.get("geschrankt") and (i + 1 < len(lijst) and lijst[i + 1].get("geschrankt") and not lijst[i + 1].get("force_midden")):
-             if geschr_t % 2 == 0:
-                 x1 = max(xo, xb) if geschr_t == 0 else xo
-                 x2 = max(xo, xb) if geschr_t == 0 else xb
-                 blokken.append({"x_mid": x1 + 500, "kg": it["kg"]})
-                 blokken.append({"x_mid": x2 + 600, "kg": lijst[i + 1]["kg"]})
-                 xo, xb = x1 + 1000, x2 + 1200
-                 bo, bb = 1200, 1000
-             else:
-                 blokken.append({"x_mid": xo + 600, "kg": it["kg"]})
-                 blokken.append({"x_mid": xb + 500, "kg": lijst[i + 1]["kg"]})
-                 xo, xb = xo + 1200, xb + 1000
-                 bo, bb = 1000, 1200
-             hoogte_o, hoogte_b = 0, 0
-             geschr_t += 1
-             i += 2
-             continue
-
+            if it.get("geschrankt") and (i + 1 < len(lijst) and lijst[i + 1].get("geschrankt") and not lijst[i + 1].get("force_midden")):
+                if geschr_t % 2 == 0:
+                    x1 = max(xo, xb) if geschr_t == 0 else xo
+                    x2 = max(xo, xb) if geschr_t == 0 else xb
+                    blokken.append({"x_mid": x1 + 500, "kg": it["kg"]})
+                    blokken.append({"x_mid": x2 + 600, "kg": lijst[i + 1]["kg"]})
+                    xo, xb = x1 + 1000, x2 + 1200
+                    bo, bb = 1200, 1000
+                else:
+                    blokken.append({"x_mid": xo + 600, "kg": it["kg"]})
+                    blokken.append({"x_mid": xb + 500, "kg": lijst[i + 1]["kg"]})
+                    xo, xb = xo + 1200, xb + 1000
+                    bo, bb = 1000, 1200
+                hoogte_o, hoogte_b = 0, 0
+                geschr_t += 1
+                i += 2
+                continue
             if xo <= xb:
+
                 if xo < xb and (it["B"] + bb > max_breedte):
                     xo, bo, hoogte_o = xb, 0, 0
                 if xo < xb and h_type > 0 and hoogte_b > 0 and h_type != hoogte_b:
