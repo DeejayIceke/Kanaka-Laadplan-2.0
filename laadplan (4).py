@@ -1160,20 +1160,18 @@ import magazijn
 magazijn.toon_magazijn_tab()
 
 st.divider()
-with st.expander("📋 Laatste updates & verbeteringen", expanded=False):
+with st.expander("Laatste updates & verbeteringen", expanded=False):
     st.markdown("""
-    * **24-11-2026:**
-        * **Slimmere herkenning bij foto's & gescande PDF's:** Automatische rotatie- en resolutieverbetering (ook voor meerpagina-scans) en automatische correctie via het nettogewicht wanneer een pen-vinkje of kreuk een cijfer deels bedekt.
-        * **Nauwkeurige CP3-gewichtsbepaling:** Bepaalt nu automatisch het juiste palletgewicht (500 kg of 1000 kg bij 2 bigbags op 1 pallet) op basis van het nettogewicht per pallet.
-        * **Symmetrische uitlijning:** Voorkomt uitstekende rijen aan de achterkant door dwarsgeplaatste stapels netjes in evenwicht te houden.
-    * **22-11-2026:**
-        * **Keuze 'Uitvloeren' uitgebreid (3 opties):** Kies tussen *Ja (zonder afstapelen)* om de vloer te benutten zonder extra heftruckwerk, *Ja (met afstapelen)* om stapels op te splitsen naar 1-hoog, of *Nee (compact)* om ruimte vrij te houden om bij te laden.
-        * **Slimme laad- & hoogtevolgorde:** Automatische opbouw van hoog naar laag (**CP7 2H ➔ CP3 1000kg ➔ CP7 1H ➔ CP3 500kg ➔ IBC**), waarbij **IBC's altijd achteraan** bij de deuren blijven voor de tweede laadkaai.
-        * **Minimaal 10 cm marge achteraan:** Het laadplan houdt nu standaard 10 cm (100 mm) vrij bij de deuren zodat alles zeker past.
-    * **Versie 2.0 (Eerdere verbeteringen):**
-        * **Laadbon scannen (PDF & foto):** Upload een Loading List (ook iPhone-foto's) om aantallen en gewichten automatisch in te vullen.
-        * **Live aslast- & zwaartepuntcontrole (45ft):** Directe controle of de belasting op de trekas (max. 11.500 kg) en het tridemstel (max. 24.000 kg) binnen de limiet blijft.
-        * **Slim combineren & plaatsen:** Automatisch combineren van CP7 600 op CP7 750 en slim draaien van pallets voor een optimale verdeling.
-        * **Handmatig aanpassen (VOR/ACH):** Zelf bepalen welke pallets vooraan of achteraan komen te staan.
-        * **Groot scherm op mobiel:** Tik op *🔍 Groot scherm* om het laadplan schermvullend op je telefoon te bekijken.
+    **25-11-2026 — CP1, Geschrankt laden & Losse Bags:**
+    - **CP1 toegevoegd onder IBC / CP1:** Kies eenvoudig tussen `1000 kg (IBC)` (achteraan bij de deuren) en `500 kg (CP1)` (vooraan tegen het kopschot als stevige rugwand).
+    - **Keuze 'Geschrankt (gedraaid)':** In een 40ft/20ft container worden IBC en CP1 automatisch om en om geschrankt geladen; in een 45ft (en in handmatige modus) is dit nu met één vinkje aan of uit te zetten.
+    - **Losse Bags (zonder pallet):** Nieuw artikel toegevoegd (2 naast elkaar x 2 hoog per rij, inclusief `2 onder + 1 dwars` bij een restant van 3) met instelbaar gewicht per zak.
+
+    ---
+
+    **Eerdere updates — Aslast, Uitvloeren & Handmatige modus:**
+    - **Automatische Aslast- & Zwaartepunt-controle (45ft):** Berekent live de druk op de trekas (max. 11.500 kg) en het tridemstel (max. 24.000 kg) en verdeelt de lading automatisch voor een optimale gewichtsbalans.
+    - **Keuze 'Uitvloeren':** Kies tussen *Ja (zonder afstapelen)*, *Ja (met afstapelen)* of *Nee (compact)* om de vloerlengte slim te benutten en schuiven tijdens transport te voorkomen.
+    - **Handmatig aanpassen (VOR / ACH):** Bepaal zelf per artikel hoeveel pallets er vooraan of achteraan staan, inclusief keuze tussen *Centraal* of *Naast elkaar*.
+    - **Download Laadplan:** Sla het complete laadplan met één klik op als scherpe afbeelding (`fons_laadplan.png`).
     """)
