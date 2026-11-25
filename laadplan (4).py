@@ -260,6 +260,14 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
 
     kop_totaal = kop_res["cp3_500"] + kop_res["cp3_1000"] + kop_res["cp7_600"] + kop_res["cp7_750"] + kop_res["ibc"] + kop_res["cp1"]
     res.update(kop_res if kop_totaal > witte_totaal else witte_res)
+        if res["bon_totaal_pal"] == 0 and bon_totaal_bag > witte_res["bags"] and bon_totaal_kg > 0:
+        kg_stuk = round(bon_totaal_kg / bon_totaal_bag)
+        if 15 <= kg_stuk <= 1000:
+            res["bags"] = bon_totaal_bag
+            res["bags_kg_stuk"] = kg_stuk
+            res["totaal_gewicht"] = bon_totaal_kg
+            res["regels"] = [f"{bon_totaal_bag}x Losse Bags ({kg_stuk}kg)"]
+
     return res
 
 
