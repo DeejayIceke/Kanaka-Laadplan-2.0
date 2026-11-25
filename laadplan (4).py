@@ -95,7 +95,7 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
         if "STACK" in r or re.search(r'PAL\s*[/|1I]?\s*\d{1,2}\.\d{3}', r):
             continue
 
-        r_kg = re.sub(r'\b[LI](\d{3})\s*(?:KG|K6)\b', r'1\1 KG', r)
+        r_kg = re.sub(r'\b[LI](\d{3})\s*(?:KG|K6)', r'1\1 KG', r)
         pal_m = re.search(r'(?<!\d)(\d{1,2})\s*(?:PAL|PA[L1I]|P4L)\b', r_kg)
         bag_m = re.search(r'(?<!\d)(\d{1,3})\s*(?:BAG|8AG)\b', r_kg)
         kg_m = re.search(r'([\d\.,]+)\s*(?:KG|K6)\b', r_kg)
