@@ -174,7 +174,9 @@ def verwerk_laadbon_tekst(volledige_tekst, is_foto=False):
                 witte_res["totaal_gewicht"] += gewicht_kg if gewicht_kg > 0 else aantal_pal * 1000
                 witte_res["regels"].append(f"{aantal_pal}x CP3 1000kg")
             elif actief_type == "CP3_500":
-                kg_p = (gewicht_kg / aantal_pal) if gewicht_kg > 0 else 500
+                aantal_bag_r = int(bag_m.group(1)) if bag_m else 0
+                kg_p = (gewicht_kg / aantal_pal) if gewicht_kg > 0 else (1000 if aantal_bag_r == aantal_pal * 2 else 500)
+
                 if kg_p > 750:
                     witte_res["cp3_1000"] += aantal_pal
                     witte_res["regels"].append(f"{aantal_pal}x CP3 1000kg")
