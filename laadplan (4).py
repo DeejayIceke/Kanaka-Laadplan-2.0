@@ -493,7 +493,7 @@ with col1:
     in_cp3 = st.number_input("Aantal CP3", min_value=0, value=init_cp3, step=1, key=f"cp3_{st.session_state.reset_id}", label_visibility="collapsed")
     pallets_cp3 = int(in_cp3) if in_cp3 is not None else 0
     if pallets_cp3 > 0:
-        default_cp3_kg = 1000 if (pdf_d and pdf_d["cp3_1000"] > pdf_d["cp3_500"]) else 500
+        default_cp3_kg = 500 if (pdf_d and pdf_d["cp3_500"] > pdf_d["cp3_1000"]) else 1000
         cp3_kg_stuk = st.selectbox("Gewicht CP3:", (500, 1000), index=0 if default_cp3_kg == 500 else 1, format_func=lambda x: f"{x} kg/pal", key=f"cp3_kg_{st.session_state.reset_id}", label_visibility="collapsed")
         product_info["CP3"]["gewicht"] = cp3_kg_stuk
 
